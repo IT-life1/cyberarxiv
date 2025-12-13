@@ -1,0 +1,37 @@
+Package: cyberarxiv
+Title: arXiv Cybersecurity Publications ETL and Analytics
+Version: 0.0.1
+Authors@R: c(
+  person("Zvonov","", role="aut"),
+  person("Kondrashkin","", role="aut"),
+  person("Dolgov","", role="aut"),
+  person("Trembachev","", role="aut"),
+  person("Mozgov","", role=c("aut","cre"), email="IT-life1@yandex.com")
+)
+Description: Collects arXiv papers related to cybersecurity, stores them locally,
+  enriches them with topic modeling, and provides an interactive Quarto dashboard
+  for exploratory analysis.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Imports:
+  httr2,
+  xml2,
+  tibble,
+  dplyr,
+  stringr,
+  lubridate,
+  purrr,
+  duckdb,
+  DBI,
+  arrow,
+  tidytext,
+  topicmodels,
+  ggplot2,
+  DT,
+  knitr
+Suggests:
+  testthat (>= 3.0.0),
+  rmarkdown
+Config/testthat/edition: 3
