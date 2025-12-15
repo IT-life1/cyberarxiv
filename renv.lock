@@ -54,7 +54,7 @@
       "Suggests": [
         "testthat"
       ],
-      "Language": "en-US",
+      "Language": "en-US",   
       "NeedsCompilation": "yes",
       "Author": "Jeroen Ooms [aut, cre] (<https://orcid.org/0000-0002-4035-0289>)",
       "Maintainer": "Jeroen Ooms <jeroenooms@gmail.com>",
