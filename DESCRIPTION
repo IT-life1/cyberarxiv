@@ -3,7 +3,7 @@ Title: arXiv Cybersecurity Publications ETL and Analytics
 Version: 0.0.1
 Authors@R: c(
   person("Zvonov","", role="aut"),
-  person("Kondrashkin","", role="aut"),
+  person("Kondrashkin","", role="aut", email="alexkondrol@yandex.ru"),
   person("Dolgov","", role="aut"),
   person("Trembachev","", role="aut"),
   person("Mozgov","", role=c("aut","cre"), email="IT-life1@yandex.com")
@@ -17,7 +17,10 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Imports:
   httr2,
-  xml2,
+  xml2
+Suggests:
+  testthat (>= 3.0.0),
+  rmarkdown
   tibble,
   dplyr,
   stringr,
@@ -31,7 +34,4 @@ Imports:
   ggplot2,
   DT,
   knitr
-Suggests:
-  testthat (>= 3.0.0),
-  rmarkdown
 Config/testthat/edition: 3
