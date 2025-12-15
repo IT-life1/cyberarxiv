@@ -5,12 +5,19 @@
 #' @param query arXiv search query. If NULL, uses a broad cybersecurity filter.
 #' @param max_results how many papers to return.
 #'
-#' @return data.frame with columns: id, title, authors, abstract, categories,
+#' @return data.frame with columns:
+#'   id, link, title, authors, abstract, categories,
 #'   published_date, updated_date.
+#'
 #' @export
 get_arxiv_papers <- function(query = NULL, max_results = 100) {
   if (is.null(query)) {
-    query <- "(cat:cs.CR OR cat:cs.NI OR cat:cs.LG) AND all:(malware OR intrusion OR attack OR threat OR adversary OR botnet OR exploit OR trojan OR phishing) AND submittedDate:[202001010000 TO 202512312359]"
+    query <- paste0(
+      "(cat:cs.CR OR cat:cs.NI OR cat:cs.LG) ",
+      "AND all:(malware OR intrusion OR attack OR threat OR adversary ",
+      "OR botnet OR exploit OR trojan OR phishing) ",
+      "AND submittedDate:[202001010000 TO 202512312359]"
+    )
   }
 
   max_results <- as.integer(max_results)
@@ -31,6 +38,7 @@ get_arxiv_papers <- function(query = NULL, max_results = 100) {
   }
 
   if (length(out) == 0L) return(.empty_df())
+
   res <- do.call(rbind, out)
   rownames(res) <- NULL
   res
@@ -50,35 +58,48 @@ get_arxiv_papers <- function(query = NULL, max_results = 100) {
 }
 
 .parse_atom <- function(doc) {
-  ns <- xml2::xml_ns(doc)
-  if ("d1" %in% names(ns)) ns <- xml2::xml_ns_rename(ns, d1 = "atom")
-  if (!("atom" %in% names(ns))) ns <- c(ns, atom = "http://www.w3.org/2005/Atom")
+  ns <- c(atom = "http://www.w3.org/2005/Atom")
 
   e <- xml2::xml_find_all(doc, ".//atom:entry", ns)
   if (!length(e)) return(.empty_df())
 
-  txt1 <- function(x, p) trimws(xml2::xml_text(xml2::xml_find_first(x, p, ns)))
+  txt1 <- function(x, p)
+    trimws(xml2::xml_text(xml2::xml_find_first(x, p, ns)))
+
+  links <- vapply(e, txt1, "", "./atom:id")
+  ids <- sub("^.*/abs/", "", links)
+  ids <- sub("v[0-9]+$", "", ids)
 
   data.frame(
-    id = vapply(e, txt1, "", "./atom:id"),
+    id = ids,
+    link = links,
     title = vapply(e, txt1, "", "./atom:title"),
     authors = vapply(e, function(x)
-      paste(trimws(xml2::xml_text(xml2::xml_find_all(x, "./atom:author/atom:name", ns))),
-            collapse = "; "), ""),
+      paste(
+        trimws(xml2::xml_text(
+          xml2::xml_find_all(x, "./atom:author/atom:name", ns)
+        )),
+        collapse = "; "
+      ), ""),
     abstract = vapply(e, txt1, "", "./atom:summary"),
     categories = vapply(e, function(x)
-      paste(xml2::xml_attr(xml2::xml_find_all(x, "./atom:category", ns), "term"),
-            collapse = "; "), ""),
+      paste(
+        xml2::xml_attr(
+          xml2::xml_find_all(x, "./atom:category", ns),
+          "term"
+        ),
+        collapse = "; "
+      ), ""),
     published_date = vapply(e, txt1, "", "./atom:published"),
     updated_date = vapply(e, txt1, "", "./atom:updated"),
     stringsAsFactors = FALSE
   )
 }
 
-
 .empty_df <- function() {
   data.frame(
     id = character(0),
+    link = character(0),
     title = character(0),
     authors = character(0),
     abstract = character(0),
