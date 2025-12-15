@@ -34,6 +34,8 @@ get_arxiv_papers <- function(query = NULL, max_results = 100) {
 
     out[[length(out) + 1L]] <- df
     start <- start + nrow(df)
+
+    Sys.sleep(0.2)
   }
 
   if (length(out) == 0L) return(.empty_df())
@@ -49,7 +51,9 @@ get_arxiv_papers <- function(query = NULL, max_results = 100) {
     httr2::req_url_query(
       search_query = query,
       start = start,
-      max_results = max_results
+      max_results = max_results,
+      sortBy = "submittedDate",
+      sortOrder = "descending"
     ) |>
     httr2::req_user_agent("cyberarxiv/0.0.1") |>
     httr2::req_perform()
