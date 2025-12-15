@@ -54,38 +54,27 @@ get_arxiv_papers <- function(query = NULL, max_results = 100) {
   if ("d1" %in% names(ns)) ns <- xml2::xml_ns_rename(ns, d1 = "atom")
   if (!("atom" %in% names(ns))) ns <- c(ns, atom = "http://www.w3.org/2005/Atom")
 
-  entries <- xml2::xml_find_all(doc, ".//atom:entry", ns)
-  if (length(entries) == 0L) return(.empty_df())
+  e <- xml2::xml_find_all(doc, ".//atom:entry", ns)
+  if (!length(e)) return(.empty_df())
 
-  get1 <- function(e, path) trimws(xml2::xml_text(xml2::xml_find_first(e, path, ns)))
-
-  ids <- vapply(entries, get1, character(1), "./atom:id")
-  titles <- vapply(entries, get1, character(1), "./atom:title")
-  abstracts <- vapply(entries, get1, character(1), "./atom:summary")
-  published <- vapply(entries, get1, character(1), "./atom:published")
-  updated <- vapply(entries, get1, character(1), "./atom:updated")
-
-  authors <- vapply(entries, function(e) {
-    a <- xml2::xml_find_all(e, "./atom:author/atom:name", ns)
-    paste(trimws(xml2::xml_text(a)), collapse = "; ")
-  }, character(1))
-
-  categories <- vapply(entries, function(e) {
-    c <- xml2::xml_find_all(e, "./atom:category", ns)
-    paste(xml2::xml_attr(c, "term"), collapse = "; ")
-  }, character(1))
+  txt1 <- function(x, p) trimws(xml2::xml_text(xml2::xml_find_first(x, p, ns)))
 
   data.frame(
-    id = ids,
-    title = titles,
-    authors = authors,
-    abstract = abstracts,
-    categories = categories,
-    published_date = published,
-    updated_date = updated,
+    id = vapply(e, txt1, "", "./atom:id"),
+    title = vapply(e, txt1, "", "./atom:title"),
+    authors = vapply(e, function(x)
+      paste(trimws(xml2::xml_text(xml2::xml_find_all(x, "./atom:author/atom:name", ns))),
+            collapse = "; "), ""),
+    abstract = vapply(e, txt1, "", "./atom:summary"),
+    categories = vapply(e, function(x)
+      paste(xml2::xml_attr(xml2::xml_find_all(x, "./atom:category", ns), "term"),
+            collapse = "; "), ""),
+    published_date = vapply(e, txt1, "", "./atom:published"),
+    updated_date = vapply(e, txt1, "", "./atom:updated"),
     stringsAsFactors = FALSE
   )
 }
+
 
 .empty_df <- function() {
   data.frame(
