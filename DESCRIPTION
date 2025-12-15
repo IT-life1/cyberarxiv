@@ -3,7 +3,7 @@ Title: arXiv Cybersecurity Publications ETL and Analytics
 Version: 0.0.1
 Authors@R: c(
   person("Zvonov","", role="aut"),
-  person("Kondrashkin","", role="aut"),
+  person("Kondrashkin","", role="aut", email="alexkondrol@yandex.ru"),
   person("Dolgov","", role="aut"),
   person("Trembachev","", role="aut"),
   person("Mozgov","", role=c("aut","cre"), email="IT-life1@yandex.com")
