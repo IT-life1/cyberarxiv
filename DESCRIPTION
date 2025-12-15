@@ -17,11 +17,11 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
 Imports:
     httr2,
-    xml2
+    xml2,
+    yaml,
+    rcmdcheck
 Suggests:
     testthat (>= 3.0.0),
     rmarkdown,
-    knitr,
-    yaml,
-    rcmdcheck
+    knitr
 Config/testthat/edition: 3
