@@ -7,7 +7,7 @@ Authors@R: c(
     person("Dolgov", "", role = "aut"),
     person("Trembachev", "", role = "aut"),
     person("Mozgov", "", role = c("aut", "cre"), email = "IT-life1@yandex.com")
-)
+    )
 Description: Collects arXiv papers related to cybersecurity, stores them locally,
     enriches them with topic modeling, and provides an interactive Quarto dashboard
     for exploratory analysis.
