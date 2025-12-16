@@ -16,11 +16,12 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
-    library(httr2)
-library(xml2)
-library(yaml)
-library(duckdb)
-library(DBI)
+    httr2,
+    xml2,
+    yaml,
+    rcmdcheck,
+    duckdb,
+    DBI
 
 Suggests:
     testthat (>= 3.0.0),
