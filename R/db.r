@@ -8,7 +8,7 @@
   p <- getOption("cyberarxiv.db_path", default = NA_character_)
   if (!is.na(p) && nzchar(p)) return(p)
 
-  file.path("data", "cyberarxiv.duckdb")
+  system.file("extdata", "cyberarxiv.duckdb", package = "cyberarxiv")
 }
 
 #' Connect to DuckDB and ensure schema exists
