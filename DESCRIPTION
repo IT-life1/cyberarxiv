@@ -22,7 +22,6 @@ Imports:
     rcmdcheck,
     duckdb,
     DBI
-
 Suggests:
     testthat (>= 3.0.0),
     rmarkdown,
