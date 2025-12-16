@@ -1,3 +1,4 @@
+#' Save arXiv publications to RDS
 #' @param data A data.frame to save
 #' @param filename Name of the RDS file (default: "arxiv_papers.rds")
 #' @param dir Directory to save the file (default: "raw-data")
@@ -31,6 +32,7 @@ save_raw_data <- function(data, filename = "arxiv_papers.rds", dir = "raw-data")
   ))
 }
 
+#' Load publications from local RDS storage
 #' @param filename Name of the RDS file to load (default: "arxiv_papers.rds")
 #' @param dir Directory containing the file (default: "raw-data")
 #'

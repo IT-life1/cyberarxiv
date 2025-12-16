@@ -1,3 +1,4 @@
+#' Search papers
 #' @param data dataframe from load_raw_data()
 #' @param query text to search
 #' @param year year filter (optional)
@@ -28,7 +29,7 @@ search_papers <- function(data, query = NULL, year = NULL) {
   result
 }
 
-
+#' Analyze papers
 #' @param data dataframe from load_raw_data()
 #'
 #' @return list with statistics

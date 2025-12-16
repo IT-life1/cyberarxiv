@@ -2,6 +2,8 @@
 
 export(analyze_papers)
 export(get_arxiv_papers)
+export(load_publications)
+export(save_publications)
 export(load_raw_data)
 export(save_raw_data)
 export(search_papers)
