@@ -38,7 +38,8 @@
       categories      VARCHAR,
       published_date  TIMESTAMP,
       updated_date    TIMESTAMP,
-      ingested_at     TIMESTAMP DEFAULT now()
+      ingested_at     TIMESTAMP DEFAULT now(),
+      topic           VARCHAR
     );
   ")
 

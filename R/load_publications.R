@@ -50,7 +50,7 @@ load_publications <- function(db_path = NULL,
   sql <- "
     SELECT
       paper_id, link, title, authors, abstract, categories,
-      published_date, updated_date, ingested_at
+      published_date, updated_date, ingested_at, topic
     FROM papers
   "
   where <- character(0)
