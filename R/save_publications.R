@@ -142,6 +142,7 @@ save_publications <- function(data, db_path = NULL) {
     categories     = .map_categories_to_names_csv(data$categories),
     published_date = to_time(data$published_date),
     updated_date   = to_time(data$updated_date),
+    topic          = as.character(data$topic),
     stringsAsFactors = FALSE
   )
 
@@ -149,45 +150,46 @@ save_publications <- function(data, db_path = NULL) {
   DBI::dbWriteTable(con, "stg_papers", df, overwrite = TRUE)
 
   updated <- DBI::dbExecute(con, "
-    UPDATE papers AS p
-    SET
-      link = s.link,
-      title = s.title,
-      authors = s.authors,
-      abstract = s.abstract,
-      categories = s.categories,
-      published_date = s.published_date,
-      updated_date = s.updated_date,
-      ingested_at = now()
-    FROM stg_papers AS s
-    WHERE p.paper_id = s.paper_id
-      AND s.paper_id IS NOT NULL
-      AND s.paper_id <> ''
-      AND (
-        p.updated_date IS NULL
-        OR s.updated_date IS NULL
-        OR s.updated_date > p.updated_date
-      );
-  ")
+  UPDATE papers AS p
+  SET
+    link = s.link,
+    title = s.title,
+    authors = s.authors,
+    abstract = s.abstract,
+    categories = s.categories,
+    published_date = s.published_date,
+    updated_date = s.updated_date,
+    ingested_at = now(),
+    topic = COALESCE(NULLIF(trim(s.topic), ''), p.topic)
+  FROM stg_papers AS s
+  WHERE p.paper_id = s.paper_id
+    AND s.paper_id IS NOT NULL
+    AND s.paper_id <> ''
+    AND (
+      p.updated_date IS NULL
+      OR s.updated_date IS NULL
+      OR s.updated_date > p.updated_date
+    );
+")
 
   # 2) INSERT новых paper_id
   inserted <- DBI::dbExecute(con, "
-    INSERT INTO papers (
-      paper_id, link, title, authors, abstract,
-      categories, published_date, updated_date
-    )
-    SELECT
-      s.paper_id, s.link, s.title, s.authors, s.abstract,
-      s.categories, s.published_date, s.updated_date
-    FROM stg_papers s
-    WHERE s.paper_id IS NOT NULL
-      AND s.paper_id <> ''
-      AND NOT EXISTS (
-        SELECT 1
-        FROM papers p
-        WHERE p.paper_id = s.paper_id
-      );
-  ")
+  INSERT INTO papers (
+    paper_id, link, title, authors, abstract,
+    categories, published_date, updated_date, topic
+  )
+  SELECT
+    s.paper_id, s.link, s.title, s.authors, s.abstract,
+    s.categories, s.published_date, s.updated_date, s.topic
+  FROM stg_papers s
+  WHERE s.paper_id IS NOT NULL
+    AND s.paper_id <> ''
+    AND NOT EXISTS (
+      SELECT 1
+      FROM papers p
+      WHERE p.paper_id = s.paper_id
+    );
+")
 
   DBI::dbExecute(con, "DROP TABLE IF EXISTS stg_papers;")
 
