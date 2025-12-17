@@ -19,7 +19,9 @@ Imports:
     httr2,
     xml2,
     duckdb,
-    DBI
+    DBI,
+    text2vec,
+    glmnet
 Suggests:
     tibble,
     testthat (>= 3.0.0),
