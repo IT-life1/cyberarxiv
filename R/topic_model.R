@@ -1,3 +1,112 @@
+#' Assign topic labels to papers based on keywords
+#'
+#' Automatically assigns one of 10 Information Security topic labels to papers
+#' based on keyword matching in title and abstract. This is useful for creating
+#' initial labeled data for training.
+#'
+#' @param data A data.frame with columns: title, abstract
+#' @param default_label Default label if no keywords match (default: "Security Analytics")
+#'
+#' @return The input data.frame with an added topic_label column
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' papers <- load_raw_data()
+#' papers <- assign_topics(papers)
+#' table(papers$topic_label)
+#' }
+assign_topics <- function(data, default_label = "Security Analytics") {
+  
+  if (!is.data.frame(data)) {
+    stop("'data' must be a data.frame")
+  }
+  
+  required_cols <- c("title", "abstract")
+  missing_cols <- setdiff(required_cols, names(data))
+  if (length(missing_cols) > 0) {
+    stop("Missing required columns: ", paste(missing_cols, collapse = ", "))
+  }
+  
+  if (nrow(data) == 0) {
+    warning("Empty data frame provided")
+    return(data)
+  }
+  
+  # Define keyword patterns for each topic
+  topic_patterns <- list(
+    "Malware Analysis" = c(
+      "malware", "trojan", "ransomware", "virus", "worm", "spyware",
+      "backdoor", "rootkit", "botnet", "payload", "infection"
+    ),
+    "Network Security" = c(
+      "network", "ddos", "firewall", "router", "packet", "traffic",
+      "protocol", "tcp", "udp", "dns", "mitm", "sniffing", "arp"
+    ),
+    "Cryptography" = c(
+      "cryptograph", "encrypt", "decrypt", "cipher", "key", "hash",
+      "rsa", "aes", "signature", "certificate", "pki", "tls", "ssl"
+    ),
+    "Authentication" = c(
+      "authenticat", "biometric", "password", "credential", "login",
+      "mfa", "2fa", "oauth", "sso", "identity", "verification"
+    ),
+    "Privacy" = c(
+      "privacy", "anonymous", "gdpr", "personal data", "tracking",
+      "surveillance", "confidential", "data protection", "pii"
+    ),
+    "Intrusion Detection" = c(
+      "intrusion", "ids", "ips", "anomaly detection", "siem",
+      "alert", "signature", "behavior", "monitoring", "detection"
+    ),
+    "Vulnerability Analysis" = c(
+      "vulnerabilit", "exploit", "cve", "patch", "bug", "flaw",
+      "weakness", "zero-day", "buffer overflow", "injection", "xss"
+    ),
+    "Threat Intelligence" = c(
+      "threat", "apt", "intelligence", "adversar", "attack",
+      "campaign", "actor", "indicator", "ioc", "hunting"
+    ),
+    "Access Control" = c(
+      "access control", "authorization", "permission", "rbac",
+      "privilege", "acl", "policy", "role", "least privilege"
+    )
+  )
+  
+  # Function to assign topic to a single paper
+  assign_single_topic <- function(title, abstract) {
+    # Combine and normalize text
+    text <- tolower(paste(title, abstract, sep = " "))
+    
+    # Score each topic based on keyword matches
+    scores <- sapply(names(topic_patterns), function(topic) {
+      keywords <- topic_patterns[[topic]]
+      matches <- sum(sapply(keywords, function(kw) grepl(kw, text, fixed = FALSE)))
+      matches
+    })
+    
+    # Return topic with highest score, or default if no matches
+    if (max(scores) > 0) {
+      return(names(scores)[which.max(scores)])
+    } else {
+      return(default_label)
+    }
+  }
+  
+  # Apply to all papers
+  message("Assigning topics to ", nrow(data), " papers...")
+  data$topic_label <- mapply(assign_single_topic, data$title, data$abstract)
+  
+  # Show distribution
+  topic_counts <- table(data$topic_label)
+  message("\nTopic distribution:")
+  for (topic in names(topic_counts)) {
+    message("  ", topic, ": ", topic_counts[topic])
+  }
+  
+  data
+}
+
 #' Train topic classification model for cybersecurity papers
 #'
 #' Trains a multinomial logistic regression model to classify papers into 10 topic labels
