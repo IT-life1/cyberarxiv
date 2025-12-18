@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.7.32">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Анализ публикаций arXiv</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="dashboard_files/libs/clipboard/clipboard.min.js"></script>
+<script src="dashboard_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="dashboard_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="dashboard_files/libs/quarto-html/popper.min.js"></script>
+<script src="dashboard_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="dashboard_files/libs/quarto-html/anchor.min.js"></script>
+<link href="dashboard_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="dashboard_files/libs/quarto-html/quarto-syntax-highlighting-37eea08aefeeee20ff55810ff984fec1.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="dashboard_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="dashboard_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="dashboard_files/libs/bootstrap/bootstrap-bb462d781dde1847d9e3ccf7736099dd.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="dashboard_files/libs/htmltools-fill-0.5.9/fill.css" rel="stylesheet">
+
+<script src="dashboard_files/libs/htmlwidgets-1.6.4/htmlwidgets.js"></script>
+
+<script src="dashboard_files/libs/plotly-binding-4.11.0/plotly.js"></script>
+
+<script src="dashboard_files/libs/typedarray-0.1/typedarray.min.js"></script>
+
+<script src="dashboard_files/libs/jquery-3.5.1/jquery.min.js"></script>
+
+<link href="dashboard_files/libs/crosstalk-1.2.2/css/crosstalk.min.css" rel="stylesheet">
+
+<script src="dashboard_files/libs/crosstalk-1.2.2/js/crosstalk.min.js"></script>
+
+<link href="dashboard_files/libs/plotly-htmlwidgets-css-2.11.1/plotly-htmlwidgets.css" rel="stylesheet">
+
+<script src="dashboard_files/libs/plotly-main-2.11.1/plotly-latest.min.js"></script>
+
+
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Анализ публикаций arXiv</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="кол-во-публикаций-по-дням" class="level2">
+<h2 class="anchored" data-anchor-id="кол-во-публикаций-по-дням">Кол-во публикаций по дням</h2>
+<div class="cell">
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-cd3015f0bf939840c699" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-cd3015f0bf939840c699">{"x":{"visdat":{"5330630c2d1f":["function () ","plotlyVisDat"]},"cur_data":"5330630c2d1f","attrs":{"5330630c2d1f":{"x":{},"y":{},"mode":"lines+markers","line":{"color":"#9467bd","width":2},"marker":{"size":6,"color":"#9467bd"},"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter"}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"domain":[0,1],"automargin":true,"title":"Месяц"},"yaxis":{"domain":[0,1],"automargin":true,"title":"Количество публикаций"},"hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":["2025-11-10 00:00:00.000000","2025-11-11 00:00:00.000000","2025-11-12 00:00:00.000000","2025-11-13 00:00:00.000000","2025-11-14 00:00:00.000000","2025-11-15 00:00:00.000000","2025-11-16 00:00:00.000000","2025-11-17 00:00:00.000000","2025-11-18 00:00:00.000000","2025-11-19 00:00:00.000000","2025-11-20 00:00:00.000000","2025-11-21 00:00:00.000000","2025-11-22 00:00:00.000000","2025-11-23 00:00:00.000000","2025-11-24 00:00:00.000000","2025-11-25 00:00:00.000000","2025-11-26 00:00:00.000000","2025-11-27 00:00:00.000000","2025-11-28 00:00:00.000000","2025-11-29 00:00:00.000000","2025-11-30 00:00:00.000000","2025-12-01 00:00:00.000000","2025-12-02 00:00:00.000000","2025-12-03 00:00:00.000000","2025-12-04 00:00:00.000000","2025-12-05 00:00:00.000000","2025-12-06 00:00:00.000000","2025-12-07 00:00:00.000000","2025-12-08 00:00:00.000000","2025-12-09 00:00:00.000000","2025-12-10 00:00:00.000000","2025-12-11 00:00:00.000000","2025-12-12 00:00:00.000000","2025-12-13 00:00:00.000000","2025-12-14 00:00:00.000000","2025-12-15 00:00:00.000000","2025-12-16 00:00:00.000000","2025-12-17 00:00:00.000000"],"y":[29,30,43,29,45,22,28,33,32,21,29,20,15,14,31,27,42,31,17,16,21,38,28,24,22,24,17,13,20,34,31,33,28,13,16,30,30,24],"mode":"lines+markers","line":{"color":"#9467bd","width":2},"marker":{"color":"#9467bd","size":6,"line":{"color":"rgba(31,119,180,1)"}},"type":"scatter","error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+</section>
+<section id="авторы-с-наибольшим-кол-вом-публикаций" class="level2">
+<h2 class="anchored" data-anchor-id="авторы-с-наибольшим-кол-вом-публикаций">Авторы с наибольшим кол-вом публикаций</h2>
+<div class="cell">
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-a7cec767562b3d792c64" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-a7cec767562b3d792c64">{"x":{"visdat":{"533042a828e":["function () ","plotlyVisDat"]},"cur_data":"533042a828e","attrs":{"533042a828e":{"x":{},"y":{},"marker":{"color":"#2ca02c"},"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"bar"}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"domain":[0,1],"automargin":true,"tickangle":-45,"title":"reorder(authors, n)","type":"category","categoryorder":"array","categoryarray":["Diego Kreutz","Elisa Bertino","Foutse Khomh","Hao Chen","Miao Pan","Saeid Jamshidi","Shouling Ji","Jun Sun","Yang Li","Yang Liu"]},"yaxis":{"domain":[0,1],"automargin":true,"title":"Число публикаций"},"hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":["Jun Sun","Yang Li","Yang Liu","Diego Kreutz","Elisa Bertino","Foutse Khomh","Hao Chen","Miao Pan","Saeid Jamshidi","Shouling Ji"],"y":[5,5,5,4,4,4,4,4,4,4],"marker":{"color":"#2ca02c","line":{"color":"rgba(31,119,180,1)"}},"type":"bar","error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+</section>
+<section id="процентное-соотношение-публикаций-с-метками" class="level2">
+<h2 class="anchored" data-anchor-id="процентное-соотношение-публикаций-с-метками">Процентное соотношение публикаций с метками</h2>
+<div class="cell">
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-97e96a951920280dbffb" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-97e96a951920280dbffb">{"x":{"visdat":{"5330290c25a0":["function () ","plotlyVisDat"]},"cur_data":"5330290c25a0","attrs":{"5330290c25a0":{"labels":{},"values":{},"textinfo":"label+percent","textposition":"inside","marker":{"colors":["#8DD3C7","#FFFFB3","#BEBADA","#FB8072","#80B1D3","#FDB462","#B3DE69","#FCCDE5","#D9D9D9","#BC80BD","#CCEBC5","#FFED6F"]},"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"pie"}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"title":{"text":"Распределение публикаций по тематическим меткам","x":0.5},"showlegend":true,"hovermode":"closest"},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"labels":["Evaluation & Benchmarking","ML Methodology","ML/AI Security","other","Learning Theory","Vulnerability","Privacy Protection","Exploit","Model Architecture","Threat Actor","Cryptography","Incident","Log Event","Malware","Social Engineering","Network Attack","Attack Vector"],"values":[274,198,83,75,70,58,57,37,33,33,29,22,12,8,7,3,1],"textinfo":"label+percent","textposition":["inside","inside","inside","inside","inside","inside","inside","inside","inside","inside","inside","inside","inside","inside","inside","inside","inside"],"marker":{"color":"rgba(31,119,180,1)","colors":["#8DD3C7","#FFFFB3","#BEBADA","#FB8072","#80B1D3","#FDB462","#B3DE69","#FCCDE5","#D9D9D9","#BC80BD","#CCEBC5","#FFED6F"],"line":{"color":"rgba(255,255,255,1)"}},"type":"pie","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+</section>
+<section id="число-публикаций-по-дням-недели" class="level2">
+<h2 class="anchored" data-anchor-id="число-публикаций-по-дням-недели">Число публикаций по дням недели</h2>
+<div class="cell">
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-fc42476c4f1d98fb2a6c" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-fc42476c4f1d98fb2a6c">{"x":{"visdat":{"53301860485d":["function () ","plotlyVisDat"]},"cur_data":"53301860485d","attrs":{"53301860485d":{"x":{},"y":{},"marker":{"color":"#9467bd"},"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"bar"}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"domain":[0,1],"automargin":true,"title":"День недели","type":"category","categoryorder":"array","categoryarray":["Пн","Вт","Ср","Чт","Пт","Сб","Вс"]},"yaxis":{"domain":[0,1],"automargin":true,"title":"Количество"},"hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":["Вс","Пн","Вт","Ср","Чт","Пт","Сб"],"y":[92,181,181,185,144,134,83],"marker":{"color":"#9467bd","line":{"color":"rgba(31,119,180,1)"}},"type":"bar","error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+</section>
+<section id="самые-частые-слова-в-аннотациях" class="level2">
+<h2 class="anchored" data-anchor-id="самые-частые-слова-в-аннотациях">Самые частые слова в аннотациях</h2>
+<div class="cell">
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-8681472bd75c6b88df8a" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-8681472bd75c6b88df8a">{"x":{"visdat":{"53307f05e6d":["function () ","plotlyVisDat"]},"cur_data":"53307f05e6d","attrs":{"53307f05e6d":{"x":{},"y":{},"marker":{"color":"#2ca02c"},"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"bar"}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"domain":[0,1],"automargin":true,"title":"","tickangle":-45,"type":"category","categoryorder":"array","categoryarray":["often","domain","graph","optimization","level","generation","address","safety","llm","networks","information","critical","accuracy","world","network","analysis","robustness","high","llms","language","privacy","large","time","detection","security","adversarial","attack","attacks","learning","models"]},"yaxis":{"domain":[0,1],"automargin":true,"title":"Частота"},"hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":["models","learning","attacks","attack","adversarial","security","detection","time","large","privacy","language","llms","high","robustness","analysis","network","world","accuracy","critical","information","networks","llm","safety","address","generation","level","graph","optimization","domain","often"],"y":[934,718,682,608,576,482,465,370,367,326,324,323,320,301,298,286,264,260,255,248,247,243,237,232,226,225,221,221,210,204],"marker":{"color":"#2ca02c","line":{"color":"rgba(31,119,180,1)"}},"type":"bar","error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+</section>
+<section id="распределение-числа-авторов-в-публикациях" class="level2">
+<h2 class="anchored" data-anchor-id="распределение-числа-авторов-в-публикациях">Распределение числа авторов в публикациях</h2>
+<div class="cell">
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-bae8289886d7cf704c07" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-bae8289886d7cf704c07">{"x":{"visdat":{"533066fc726b":["function () ","plotlyVisDat"]},"cur_data":"533066fc726b","attrs":{"533066fc726b":{"x":{},"marker":{"color":"#9467bd"},"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"histogram"}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"domain":[0,1],"automargin":true,"title":"Число авторов"},"yaxis":{"domain":[0,1],"automargin":true,"title":"Число публикаций"},"hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":[5,10,3,7,4,6,3,2,8,3,1,6,6,3,6,3,3,3,3,2,5,8,3,1,7,6,9,5,2,2,1,2,3,3,5,1,1,4,2,3,1,1,6,2,4,8,5,4,5,6,3,3,5,3,6,4,10,3,6,4,7,4,2,1,4,2,8,3,4,4,1,5,9,3,3,2,3,3,2,3,4,7,1,1,1,7,4,6,1,3,8,3,7,5,3,5,3,2,3,7,2,3,4,1,4,9,1,4,3,6,1,3,5,1,6,1,6,1,6,4,1,2,8,3,3,2,1,5,7,5,2,4,5,5,6,4,4,5,2,7,4,4,4,6,3,4,3,15,4,6,5,5,4,5,4,4,4,8,2,6,6,2,5,1,3,2,2,2,6,3,7,14,7,3,6,6,5,5,4,8,4,6,7,6,5,3,1,6,6,4,1,2,3,1,6,1,3,2,3,2,13,2,2,6,1,7,2,3,8,7,5,2,12,5,2,3,2,2,5,3,9,6,5,4,6,5,2,4,2,3,3,5,5,7,1,1,2,4,2,10,4,6,3,8,4,12,6,5,10,5,5,3,3,4,6,1,10,3,4,7,4,8,8,1,4,7,2,5,7,4,3,3,12,9,7,13,6,6,2,3,8,3,9,6,2,1,2,1,7,8,5,5,4,2,1,1,5,4,14,3,6,5,2,2,2,1,6,6,2,1,7,9,6,5,2,2,17,2,2,1,5,5,3,2,3,3,4,4,8,3,4,8,1,2,2,3,12,2,6,1,5,3,3,1,2,4,3,4,4,2,3,4,3,1,11,6,6,6,4,4,6,2,4,4,7,1,3,3,2,8,8,7,7,2,1,5,2,3,6,4,1,8,6,3,2,3,2,3,6,5,4,6,3,9,2,5,3,3,3,2,5,1,2,7,7,2,12,1,4,5,3,4,6,4,8,2,4,7,5,3,4,1,2,4,6,6,4,6,3,8,5,7,2,4,3,5,6,2,4,8,10,8,9,3,12,2,6,5,2,8,8,3,4,3,7,2,3,4,4,6,10,2,6,3,2,7,7,1,2,5,4,1,1,2,9,6,4,1,4,6,2,2,5,1,1,4,6,4,6,6,2,8,4,5,3,3,1,2,5,3,2,1,2,7,5,7,9,3,5,5,2,1,6,4,2,5,2,10,2,2,3,8,5,3,3,1,4,1,4,19,6,12,4,6,6,4,4,1,4,5,3,4,2,1,4,2,3,4,5,2,4,1,5,3,5,5,5,5,4,1,4,3,6,6,7,6,5,9,3,7,2,5,6,4,9,3,4,2,3,4,1,4,4,2,5,4,3,6,3,5,2,4,2,3,2,7,4,4,6,4,4,6,5,4,10,4,2,1,2,5,5,3,10,1,6,7,6,7,6,1,5,5,5,5,1,8,4,11,5,4,1,8,4,2,2,4,2,1,4,3,2,4,5,10,5,2,2,7,5,7,4,4,4,6,6,5,5,5,6,7,2,2,2,1,2,8,3,4,3,6,3,4,5,6,7,4,5,2,3,1,5,3,3,5,8,1,2,2,3,4,3,6,5,2,4,5,2,3,5,7,8,11,4,2,1,4,8,6,5,4,6,7,1,2,4,1,2,5,4,5,1,5,3,7,4,4,5,5,3,2,2,3,3,9,5,2,4,3,2,5,4,6,8,3,5,2,3,2,4,2,4,11,5,3,3,4,3,5,6,3,3,7,2,3,7,9,1,6,3,3,15,2,2,4,5,6,1,10,3,2,3,4,7,8,2,9,7,1,2,4,5,10,5,3,3,7,3,6,1,2,1,5,2,3,4,3,2,4,4,8,1,1,10,4,2,6,2,3,4,5,2,7,8,6,5,13,3,5,3,3,3,2,2,1,1,4,6,3,3,6,2,4,7,3,1,5,5,2,6,10,2,5,6,2,5,1,12,4,3,2,6,3,2,2,4,8,6,2,4,2,2,3,4,3,2,9,9,4,8,2,2,9,2,5,5,2,4,5,4,2,5,4,6,2,6,3,1,5,4,2,6,4,7,3,6,6,5,1,3,4,8,7,3,5,2,6,8,4,4,4,3,5,4,3,2,6,7,5,2,5,3,5,5,5,3,4,3,4,1,9,6,6,3,2,6,6,6,5,5,4,5,6,5,4,4,3,3,2,4,6,4,10,7,4,5,2,15,2,4,6,5,4,4,3,7,5,3,4,4,13,4,4,1,3,4,4,5,4,2,4,5,9,3,6,8,8,7,1,4,2],"marker":{"color":"#9467bd","line":{"color":"rgba(31,119,180,1)"}},"type":"histogram","error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-37d6920b856d12c9b85a" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-37d6920b856d12c9b85a">{"x":{"data":[{"orientation":"v","width":[8,4,3,3,3],"base":[4.5499999999999998,3.5499999999999998,0.55000000000000004,1.55,2.5499999999999998],"x":[4,2,1.5,1.5,1.5],"y":[0.90000000000000036,0.90000000000000036,0.89999999999999991,0.90000000000000013,0.90000000000000036],"text":["n:   8<br />word: cognitive___Attack Vector<br />tag: Attack Vector","n:   4<br />word: cyber___Attack Vector<br />tag: Attack Vector","n:   3<br />word: attacker___Attack Vector<br />tag: Attack Vector","n:   3<br />word: biases___Attack Vector<br />tag: Attack Vector","n:   3<br />word: gambit___Attack Vector<br />tag: Attack Vector"],"type":"bar","textposition":"none","marker":{"autocolorscale":false,"color":"rgba(248,118,109,1)","line":{"width":1.8897637795275593,"color":"transparent"}},"name":"Attack Vector","legendgroup":"Attack Vector","showlegend":true,"xaxis":"x","yaxis":"y","hoverinfo":"text","frame":null},{"orientation":"v","width":[74,44,24,24,20],"base":[4.5499999999999998,3.5499999999999998,1.55,2.5499999999999998,0.55000000000000004],"x":[37,22,12,12,10],"y":[0.90000000000000036,0.90000000000000036,0.90000000000000013,0.90000000000000036,0.89999999999999991],"text":["n:  74<br />word: quantum___Cryptography<br />tag: Cryptography","n:  44<br />word: security___Cryptography<br />tag: Cryptography","n:  24<br />word: attacks___Cryptography<br />tag: Cryptography","n:  24<br />word: protocol___Cryptography<br />tag: Cryptography","n:  20<br />word: time___Cryptography<br />tag: Cryptography"],"type":"bar","textposition":"none","marker":{"autocolorscale":false,"color":"rgba(230,134,19,1)","line":{"width":1.8897637795275593,"color":"transparent"}},"name":"Cryptography","legendgroup":"Cryptography","showlegend":true,"xaxis":"x2","yaxis":"y2","hoverinfo":"text","frame":null},{"orientation":"v","width":[288,178,178,150,149],"base":[4.5499999999999998,2.5499999999999998,3.5499999999999998,1.55,0.55000000000000004],"x":[144,89,89,75,74.5],"y":[0.90000000000000036,0.90000000000000036,0.90000000000000036,0.90000000000000013,0.89999999999999991],"text":["n: 288<br />word: models___Evaluation & Benchmarking<br />tag: Evaluation & Benchmarking","n: 178<br />word: attacks___Evaluation & Benchmarking<br />tag: Evaluation & Benchmarking","n: 178<br />word: detection___Evaluation & Benchmarking<br />tag: Evaluation & Benchmarking","n: 150<br />word: attack___Evaluation & Benchmarking<br />tag: Evaluation & Benchmarking","n: 149<br />word: adversarial___Evaluation & Benchmarking<br />tag: Evaluation & Benchmarking"],"type":"bar","textposition":"none","marker":{"autocolorscale":false,"color":"rgba(205,150,0,1)","line":{"width":1.8897637795275593,"color":"transparent"}},"name":"Evaluation & Benchmarking","legendgroup":"Evaluation & Benchmarking","showlegend":true,"xaxis":"x3","yaxis":"y3","hoverinfo":"text","frame":null},{"orientation":"v","width":[29,25,24,23,17],"base":[4.5499999999999998,3.5499999999999998,2.5499999999999998,1.55,0.55000000000000004],"x":[14.5,12.5,12,11.5,8.5],"y":[0.90000000000000036,0.90000000000000036,0.90000000000000036,0.90000000000000013,0.89999999999999991],"text":["n:  29<br />word: optimization___Exploit<br />tag: Exploit","n:  25<br />word: models___Exploit<br />tag: Exploit","n:  24<br />word: exploit___Exploit<br />tag: Exploit","n:  23<br />word: tool___Exploit<br />tag: Exploit","n:  17<br />word: learning___Exploit<br />tag: Exploit"],"type":"bar","textposition":"none","marker":{"autocolorscale":false,"color":"rgba(171,163,0,1)","line":{"width":1.8897637795275593,"color":"transparent"}},"name":"Exploit","legendgroup":"Exploit","showlegend":true,"xaxis":"x4","yaxis":"y4","hoverinfo":"text","frame":null},{"orientation":"v","width":[27,17,17,16,13],"base":[4.5499999999999998,2.5499999999999998,3.5499999999999998,1.55,0.55000000000000004],"x":[13.5,8.5,8.5,8,6.5],"y":[0.90000000000000036,0.90000000000000036,0.90000000000000036,0.90000000000000013,0.89999999999999991],"text":["n:  27<br />word: security___Incident<br />tag: Incident","n:  17<br />word: attack___Incident<br />tag: Incident","n:  17<br />word: detection___Incident<br />tag: Incident","n:  16<br />word: time___Incident<br />tag: Incident","n:  13<br />word: attacks___Incident<br />tag: Incident"],"type":"bar","textposition":"none","marker":{"autocolorscale":false,"color":"rgba(124,174,0,1)","line":{"width":1.8897637795275593,"color":"transparent"}},"name":"Incident","legendgroup":"Incident","showlegend":true,"xaxis":"x","yaxis":"y5","hoverinfo":"text","frame":null},{"orientation":"v","width":[66,57,57,52,43],"base":[4.5499999999999998,2.5499999999999998,3.5499999999999998,1.55,0.55000000000000004],"x":[33,28.5,28.5,26,21.5],"y":[0.90000000000000036,0.90000000000000036,0.90000000000000036,0.90000000000000013,0.89999999999999991],"text":["n:  66<br />word: models___Learning Theory<br />tag: Learning Theory","n:  57<br />word: adversarial___Learning Theory<br />tag: Learning Theory","n:  57<br />word: learning___Learning Theory<br />tag: Learning Theory","n:  52<br />word: generalization___Learning Theory<br />tag: Learning Theory","n:  43<br />word: attack___Learning Theory<br />tag: Learning Theory"],"type":"bar","textposition":"none","marker":{"autocolorscale":false,"color":"rgba(11,183,2,1)","line":{"width":1.8897637795275593,"color":"transparent"}},"name":"Learning Theory","legendgroup":"Learning Theory","showlegend":true,"xaxis":"x2","yaxis":"y6","hoverinfo":"text","frame":null},{"orientation":"v","width":[13,11,11,10,9],"base":[4.5499999999999998,2.5499999999999998,3.5499999999999998,1.55,0.55000000000000004],"x":[6.5,5.5,5.5,5,4.5],"y":[0.90000000000000036,0.90000000000000036,0.90000000000000036,0.90000000000000013,0.89999999999999991],"text":["n:  13<br />word: time___Log Event<br />tag: Log Event","n:  11<br />word: detection___Log Event<br />tag: Log Event","n:  11<br />word: regret___Log Event<br />tag: Log Event","n:  10<br />word: log___Log Event<br />tag: Log Event","n:   9<br />word: control___Log Event<br />tag: Log Event"],"type":"bar","textposition":"none","marker":{"autocolorscale":false,"color":"rgba(0,190,103,1)","line":{"width":1.8897637795275593,"color":"transparent"}},"name":"Log Event","legendgroup":"Log Event","showlegend":true,"xaxis":"x3","yaxis":"y7","hoverinfo":"text","frame":null},{"orientation":"v","width":[13,9,8,8,8],"base":[4.5499999999999998,3.5499999999999998,0.55000000000000004,1.55,2.5499999999999998],"x":[6.5,4.5,4,4,4],"y":[0.90000000000000036,0.90000000000000036,0.89999999999999991,0.90000000000000013,0.90000000000000036],"text":["n:  13<br />word: backdoor___Malware<br />tag: Malware","n:   9<br />word: malicious___Malware<br />tag: Malware","n:   8<br />word: analysis___Malware<br />tag: Malware","n:   8<br />word: class___Malware<br />tag: Malware","n:   8<br />word: fine___Malware<br />tag: Malware"],"type":"bar","textposition":"none","marker":{"autocolorscale":false,"color":"rgba(0,193,154,1)","line":{"width":1.8897637795275593,"color":"transparent"}},"name":"Malware","legendgroup":"Malware","showlegend":true,"xaxis":"x4","yaxis":"y8","hoverinfo":"text","frame":null},{"orientation":"v","width":[329,205,103,101,97],"base":[4.5499999999999998,3.5499999999999998,2.5499999999999998,1.55,0.55000000000000004],"x":[164.5,102.5,51.5,50.5,48.5],"y":[0.90000000000000036,0.90000000000000036,0.90000000000000036,0.90000000000000013,0.89999999999999991],"text":["n: 329<br />word: learning___ML Methodology<br />tag: ML Methodology","n: 205<br />word: models___ML Methodology<br />tag: ML Methodology","n: 103<br />word: adversarial___ML Methodology<br />tag: ML Methodology","n: 101<br />word: attacks___ML Methodology<br />tag: ML Methodology","n:  97<br />word: reinforcement___ML Methodology<br />tag: ML Methodology"],"type":"bar","textposition":"none","marker":{"autocolorscale":false,"color":"rgba(0,191,196,1)","line":{"width":1.8897637795275593,"color":"transparent"}},"name":"ML Methodology","legendgroup":"ML Methodology","showlegend":true,"xaxis":"x","yaxis":"y9","hoverinfo":"text","frame":null},{"orientation":"v","width":[115,112,100,91,82],"base":[4.5499999999999998,3.5499999999999998,2.5499999999999998,1.55,0.55000000000000004],"x":[57.5,56,50,45.5,41],"y":[0.90000000000000036,0.90000000000000036,0.90000000000000036,0.90000000000000013,0.89999999999999991],"text":["n: 115<br />word: adversarial___ML/AI Security<br />tag: ML/AI Security","n: 112<br />word: models___ML/AI Security<br />tag: ML/AI Security","n: 100<br />word: attacks___ML/AI Security<br />tag: ML/AI Security","n:  91<br />word: attack___ML/AI Security<br />tag: ML/AI Security","n:  82<br />word: learning___ML/AI Security<br />tag: ML/AI Security"],"type":"bar","textposition":"none","marker":{"autocolorscale":false,"color":"rgba(0,184,231,1)","line":{"width":1.8897637795275593,"color":"transparent"}},"name":"ML/AI Security","legendgroup":"ML/AI Security","showlegend":true,"xaxis":"x2","yaxis":"y10","hoverinfo":"text","frame":null},{"orientation":"v","width":[31,26,24,23,22],"base":[4.5499999999999998,3.5499999999999998,2.5499999999999998,1.55,0.55000000000000004],"x":[15.5,13,12,11.5,11],"y":[0.90000000000000036,0.90000000000000036,0.90000000000000036,0.90000000000000013,0.89999999999999991],"text":["n:  31<br />word: models___Model Architecture<br />tag: Model Architecture","n:  26<br />word: real___Model Architecture<br />tag: Model Architecture","n:  24<br />word: detection___Model Architecture<br />tag: Model Architecture","n:  23<br />word: network___Model Architecture<br />tag: Model Architecture","n:  22<br />word: neural___Model Architecture<br />tag: Model Architecture"],"type":"bar","textposition":"none","marker":{"autocolorscale":false,"color":"rgba(0,169,255,1)","line":{"width":1.8897637795275593,"color":"transparent"}},"name":"Model Architecture","legendgroup":"Model Architecture","showlegend":true,"xaxis":"x3","yaxis":"y11","hoverinfo":"text","frame":null},{"orientation":"v","width":[8,7,7,6,5],"base":[4.5499999999999998,2.5499999999999998,3.5499999999999998,1.55,0.55000000000000004],"x":[4,3.5,3.5,3,2.5],"y":[0.90000000000000036,0.90000000000000036,0.90000000000000036,0.90000000000000013,0.89999999999999991],"text":["n:   8<br />word: digital___Network Attack<br />tag: Network Attack","n:   7<br />word: attacks___Network Attack<br />tag: Network Attack","n:   7<br />word: network___Network Attack<br />tag: Network Attack","n:   6<br />word: detection___Network Attack<br />tag: Network Attack","n:   5<br />word: attack___Network Attack<br />tag: Network Attack"],"type":"bar","textposition":"none","marker":{"autocolorscale":false,"color":"rgba(132,148,255,1)","line":{"width":1.8897637795275593,"color":"transparent"}},"name":"Network Attack","legendgroup":"Network Attack","showlegend":true,"xaxis":"x4","yaxis":"y12","hoverinfo":"text","frame":null},{"orientation":"v","width":[167,49,39,39,35],"base":[4.5499999999999998,3.5499999999999998,1.55,2.5499999999999998,0.55000000000000004],"x":[83.5,24.5,19.5,19.5,17.5],"y":[0.90000000000000036,0.90000000000000036,0.90000000000000013,0.90000000000000036,0.89999999999999991],"text":["n: 167<br />word: privacy___Privacy Protection<br />tag: Privacy Protection","n:  49<br />word: attacks___Privacy Protection<br />tag: Privacy Protection","n:  39<br />word: models___Privacy Protection<br />tag: Privacy Protection","n:  39<br />word: security___Privacy Protection<br />tag: Privacy Protection","n:  35<br />word: utility___Privacy Protection<br />tag: Privacy Protection"],"type":"bar","textposition":"none","marker":{"autocolorscale":false,"color":"rgba(199,124,255,1)","line":{"width":1.8897637795275593,"color":"transparent"}},"name":"Privacy Protection","legendgroup":"Privacy Protection","showlegend":true,"xaxis":"x","yaxis":"y13","hoverinfo":"text","frame":null},{"orientation":"v","width":[10,9,8,8,7],"base":[4.5499999999999998,3.5499999999999998,1.55,2.5499999999999998,0.55000000000000004],"x":[5,4.5,4,4,3.5],"y":[0.90000000000000036,0.90000000000000036,0.90000000000000013,0.90000000000000036,0.89999999999999991],"text":["n:  10<br />word: latency___Social Engineering<br />tag: Social Engineering","n:   9<br />word: phishing___Social Engineering<br />tag: Social Engineering","n:   8<br />word: nft___Social Engineering<br />tag: Social Engineering","n:   8<br />word: transaction___Social Engineering<br />tag: Social Engineering","n:   7<br />word: fraud___Social Engineering<br />tag: Social Engineering"],"type":"bar","textposition":"none","marker":{"autocolorscale":false,"color":"rgba(237,104,237,1)","line":{"width":1.8897637795275593,"color":"transparent"}},"name":"Social Engineering","legendgroup":"Social Engineering","showlegend":true,"xaxis":"x2","yaxis":"y14","hoverinfo":"text","frame":null},{"orientation":"v","width":[36,22,21,21,20],"base":[4.5499999999999998,3.5499999999999998,1.55,2.5499999999999998,0.55000000000000004],"x":[18,11,10.5,10.5,10],"y":[0.90000000000000036,0.90000000000000036,0.90000000000000013,0.90000000000000036,0.89999999999999991],"text":["n:  36<br />word: attacker___Threat Actor<br />tag: Threat Actor","n:  22<br />word: time___Threat Actor<br />tag: Threat Actor","n:  21<br />word: attack___Threat Actor<br />tag: Threat Actor","n:  21<br />word: security___Threat Actor<br />tag: Threat Actor","n:  20<br />word: attacks___Threat Actor<br />tag: Threat Actor"],"type":"bar","textposition":"none","marker":{"autocolorscale":false,"color":"rgba(255,97,204,1)","line":{"width":1.8897637795275593,"color":"transparent"}},"name":"Threat Actor","legendgroup":"Threat Actor","showlegend":true,"xaxis":"x3","yaxis":"y15","hoverinfo":"text","frame":null},{"orientation":"v","width":[92,67,57,57,48],"base":[4.5499999999999998,3.5499999999999998,1.55,2.5499999999999998,0.55000000000000004],"x":[46,33.5,28.5,28.5,24],"y":[0.90000000000000036,0.90000000000000036,0.90000000000000013,0.90000000000000036,0.89999999999999991],"text":["n:  92<br />word: attack___Vulnerability<br />tag: Vulnerability","n:  67<br />word: security___Vulnerability<br />tag: Vulnerability","n:  57<br />word: models___Vulnerability<br />tag: Vulnerability","n:  57<br />word: vulnerability___Vulnerability<br />tag: Vulnerability","n:  48<br />word: attacks___Vulnerability<br />tag: Vulnerability"],"type":"bar","textposition":"none","marker":{"autocolorscale":false,"color":"rgba(255,104,161,1)","line":{"width":1.8897637795275593,"color":"transparent"}},"name":"Vulnerability","legendgroup":"Vulnerability","showlegend":true,"xaxis":"x4","yaxis":"y16","hoverinfo":"text","frame":null}],"layout":{"margin":{"t":51.201328352013292,"r":7.3059360730593621,"b":36.197592361975921,"l":73.391448733914487},"plot_bgcolor":"rgba(255,255,255,1)","paper_bgcolor":"rgba(255,255,255,1)","font":{"color":"rgba(0,0,0,1)","family":"","size":14.611872146118724},"title":{"text":"Топ-5 ключевых слов по темам","font":{"color":"rgba(0,0,0,1)","family":"","size":15.940224159402243},"x":0.5,"xref":"paper"},"xaxis":{"domain":[0,0.20216166550165041],"automargin":true,"type":"linear","autorange":false,"range":[-16.449999999999999,345.44999999999999],"tickmode":"array","ticktext":["0","100","200","300"],"tickvals":[0,100,200,300],"categoryorder":"array","categoryarray":["0","100","200","300"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"y13","title":"","hoverformat":".2f"},"annotations":[{"text":"Частота","x":0.5,"y":0,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(0,0,0,1)","family":"","size":14.611872146118724},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"top","annotationType":"axis","yshift":-20.85512660855127},{"text":"Ключевое слово","x":0,"y":0.5,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(0,0,0,1)","family":"","size":14.611872146118724},"xref":"paper","yref":"paper","textangle":-90,"xanchor":"right","yanchor":"center","annotationType":"axis","xshift":-58.048982980489832},{"text":"Attack Vector","x":0.1010808327508252,"y":1,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.955168119551683},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"Cryptography","x":0.375,"y":1,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.955168119551683},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"Evaluation & Benchmarking","x":0.625,"y":1,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.955168119551683},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"Exploit","x":0.89891916724917476,"y":1,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.955168119551683},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"Incident","x":0.1010808327508252,"y":0.73180175719006479,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.955168119551683},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"Learning Theory","x":0.375,"y":0.73180175719006479,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.955168119551683},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"Log Event","x":0.625,"y":0.73180175719006479,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.955168119551683},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"Malware","x":0.89891916724917476,"y":0.73180175719006479,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.955168119551683},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"ML Methodology","x":0.1010808327508252,"y":0.48180175719006479,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.955168119551683},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"ML/AI Security","x":0.375,"y":0.48180175719006479,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.955168119551683},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"Model Architecture","x":0.625,"y":0.48180175719006479,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.955168119551683},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"Network Attack","x":0.89891916724917476,"y":0.48180175719006479,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.955168119551683},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"Privacy Protection","x":0.1010808327508252,"y":0.23180175719006482,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.955168119551683},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"Social Engineering","x":0.375,"y":0.23180175719006482,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.955168119551683},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"Threat Actor","x":0.625,"y":0.23180175719006482,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.955168119551683},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"Vulnerability","x":0.89891916724917476,"y":0.23180175719006482,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.955168119551683},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"}],"yaxis":{"domain":[0.76819824280993521,1],"automargin":true,"type":"linear","autorange":false,"range":[0.40000000000000002,5.5999999999999996],"tickmode":"array","ticktext":["attacker","biases","gambit","cyber","cognitive"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["attacker","biases","gambit","cyber","cognitive"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"x","title":"","hoverformat":".2f"},"shapes":[{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0,"x1":0.20216166550165041,"y0":0.76819824280993521,"y1":1},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0,"x1":0.20216166550165041,"y0":0,"y1":23.644665836446663,"yanchor":1,"ysizemode":"pixel"},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.29783833449834962,"x1":0.45216166550165038,"y0":0.76819824280993521,"y1":1},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.29783833449834962,"x1":0.45216166550165038,"y0":0,"y1":23.644665836446663,"yanchor":1,"ysizemode":"pixel"},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.54783833449834962,"x1":0.70216166550165038,"y0":0.76819824280993521,"y1":1},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.54783833449834962,"x1":0.70216166550165038,"y0":0,"y1":23.644665836446663,"yanchor":1,"ysizemode":"pixel"},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.79783833449834962,"x1":1,"y0":0.76819824280993521,"y1":1},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.79783833449834962,"x1":1,"y0":0,"y1":23.644665836446663,"yanchor":1,"ysizemode":"pixel"},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0,"x1":0.20216166550165041,"y0":0.51819824280993521,"y1":0.73180175719006479},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0,"x1":0.20216166550165041,"y0":0,"y1":23.644665836446663,"yanchor":0.73180175719006479,"ysizemode":"pixel"},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.29783833449834962,"x1":0.45216166550165038,"y0":0.51819824280993521,"y1":0.73180175719006479},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.29783833449834962,"x1":0.45216166550165038,"y0":0,"y1":23.644665836446663,"yanchor":0.73180175719006479,"ysizemode":"pixel"},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.54783833449834962,"x1":0.70216166550165038,"y0":0.51819824280993521,"y1":0.73180175719006479},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.54783833449834962,"x1":0.70216166550165038,"y0":0,"y1":23.644665836446663,"yanchor":0.73180175719006479,"ysizemode":"pixel"},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.79783833449834962,"x1":1,"y0":0.51819824280993521,"y1":0.73180175719006479},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.79783833449834962,"x1":1,"y0":0,"y1":23.644665836446663,"yanchor":0.73180175719006479,"ysizemode":"pixel"},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0,"x1":0.20216166550165041,"y0":0.26819824280993521,"y1":0.48180175719006479},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0,"x1":0.20216166550165041,"y0":0,"y1":23.644665836446663,"yanchor":0.48180175719006479,"ysizemode":"pixel"},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.29783833449834962,"x1":0.45216166550165038,"y0":0.26819824280993521,"y1":0.48180175719006479},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.29783833449834962,"x1":0.45216166550165038,"y0":0,"y1":23.644665836446663,"yanchor":0.48180175719006479,"ysizemode":"pixel"},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.54783833449834962,"x1":0.70216166550165038,"y0":0.26819824280993521,"y1":0.48180175719006479},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.54783833449834962,"x1":0.70216166550165038,"y0":0,"y1":23.644665836446663,"yanchor":0.48180175719006479,"ysizemode":"pixel"},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.79783833449834962,"x1":1,"y0":0.26819824280993521,"y1":0.48180175719006479},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.79783833449834962,"x1":1,"y0":0,"y1":23.644665836446663,"yanchor":0.48180175719006479,"ysizemode":"pixel"},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0,"x1":0.20216166550165041,"y0":0,"y1":0.23180175719006482},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0,"x1":0.20216166550165041,"y0":0,"y1":23.644665836446663,"yanchor":0.23180175719006482,"ysizemode":"pixel"},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.29783833449834962,"x1":0.45216166550165038,"y0":0,"y1":0.23180175719006482},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.29783833449834962,"x1":0.45216166550165038,"y0":0,"y1":23.644665836446663,"yanchor":0.23180175719006482,"ysizemode":"pixel"},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.54783833449834962,"x1":0.70216166550165038,"y0":0,"y1":0.23180175719006482},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.54783833449834962,"x1":0.70216166550165038,"y0":0,"y1":23.644665836446663,"yanchor":0.23180175719006482,"ysizemode":"pixel"},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.79783833449834962,"x1":1,"y0":0,"y1":0.23180175719006482},{"type":"rect","fillcolor":null,"line":{"color":null,"width":0,"linetype":[]},"yref":"paper","xref":"paper","layer":"below","x0":0.79783833449834962,"x1":1,"y0":0,"y1":23.644665836446663,"yanchor":0.23180175719006482,"ysizemode":"pixel"}],"xaxis2":{"type":"linear","autorange":false,"range":[-16.449999999999999,345.44999999999999],"tickmode":"array","ticktext":["0","100","200","300"],"tickvals":[0,100,200,300],"categoryorder":"array","categoryarray":["0","100","200","300"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0.29783833449834962,0.45216166550165038],"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"y14","title":"","hoverformat":".2f"},"yaxis2":{"type":"linear","autorange":false,"range":[0.40000000000000002,5.5999999999999996],"tickmode":"array","ticktext":["time","attacks","protocol","security","quantum"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["time","attacks","protocol","security","quantum"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0.76819824280993521,1],"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"x2","title":"","hoverformat":".2f"},"xaxis3":{"type":"linear","autorange":false,"range":[-16.449999999999999,345.44999999999999],"tickmode":"array","ticktext":["0","100","200","300"],"tickvals":[0,100,200,300],"categoryorder":"array","categoryarray":["0","100","200","300"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0.54783833449834962,0.70216166550165038],"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"y15","title":"","hoverformat":".2f"},"yaxis3":{"type":"linear","autorange":false,"range":[0.40000000000000002,5.5999999999999996],"tickmode":"array","ticktext":["adversarial","attack","attacks","detection","models"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["adversarial","attack","attacks","detection","models"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0.76819824280993521,1],"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"x3","title":"","hoverformat":".2f"},"xaxis4":{"type":"linear","autorange":false,"range":[-16.449999999999999,345.44999999999999],"tickmode":"array","ticktext":["0","100","200","300"],"tickvals":[0,100,200,300],"categoryorder":"array","categoryarray":["0","100","200","300"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0.79783833449834962,1],"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"y16","title":"","hoverformat":".2f"},"yaxis4":{"type":"linear","autorange":false,"range":[0.40000000000000002,5.5999999999999996],"tickmode":"array","ticktext":["learning","tool","exploit","models","optimization"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["learning","tool","exploit","models","optimization"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0.76819824280993521,1],"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"x4","title":"","hoverformat":".2f"},"yaxis5":{"type":"linear","autorange":false,"range":[0.40000000000000002,5.5999999999999996],"tickmode":"array","ticktext":["attacks","time","attack","detection","security"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["attacks","time","attack","detection","security"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0.51819824280993521,0.73180175719006479],"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"x","title":"","hoverformat":".2f"},"yaxis6":{"type":"linear","autorange":false,"range":[0.40000000000000002,5.5999999999999996],"tickmode":"array","ticktext":["attack","generalization","adversarial","learning","models"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["attack","generalization","adversarial","learning","models"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0.51819824280993521,0.73180175719006479],"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"x2","title":"","hoverformat":".2f"},"yaxis7":{"type":"linear","autorange":false,"range":[0.40000000000000002,5.5999999999999996],"tickmode":"array","ticktext":["control","log","detection","regret","time"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["control","log","detection","regret","time"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0.51819824280993521,0.73180175719006479],"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"x3","title":"","hoverformat":".2f"},"yaxis8":{"type":"linear","autorange":false,"range":[0.40000000000000002,5.5999999999999996],"tickmode":"array","ticktext":["analysis","class","fine","malicious","backdoor"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["analysis","class","fine","malicious","backdoor"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0.51819824280993521,0.73180175719006479],"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"x4","title":"","hoverformat":".2f"},"yaxis9":{"type":"linear","autorange":false,"range":[0.40000000000000002,5.5999999999999996],"tickmode":"array","ticktext":["reinforcement","attacks","adversarial","models","learning"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["reinforcement","attacks","adversarial","models","learning"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0.26819824280993521,0.48180175719006479],"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"x","title":"","hoverformat":".2f"},"yaxis10":{"type":"linear","autorange":false,"range":[0.40000000000000002,5.5999999999999996],"tickmode":"array","ticktext":["learning","attack","attacks","models","adversarial"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["learning","attack","attacks","models","adversarial"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0.26819824280993521,0.48180175719006479],"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"x2","title":"","hoverformat":".2f"},"yaxis11":{"type":"linear","autorange":false,"range":[0.40000000000000002,5.5999999999999996],"tickmode":"array","ticktext":["neural","network","detection","real","models"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["neural","network","detection","real","models"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0.26819824280993521,0.48180175719006479],"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"x3","title":"","hoverformat":".2f"},"yaxis12":{"type":"linear","autorange":false,"range":[0.40000000000000002,5.5999999999999996],"tickmode":"array","ticktext":["attack","detection","attacks","network","digital"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["attack","detection","attacks","network","digital"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0.26819824280993521,0.48180175719006479],"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"x4","title":"","hoverformat":".2f"},"yaxis13":{"type":"linear","autorange":false,"range":[0.40000000000000002,5.5999999999999996],"tickmode":"array","ticktext":["utility","models","security","attacks","privacy"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["utility","models","security","attacks","privacy"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0,0.23180175719006482],"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"x","title":"","hoverformat":".2f"},"yaxis14":{"type":"linear","autorange":false,"range":[0.40000000000000002,5.5999999999999996],"tickmode":"array","ticktext":["fraud","nft","transaction","phishing","latency"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["fraud","nft","transaction","phishing","latency"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0,0.23180175719006482],"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"x2","title":"","hoverformat":".2f"},"yaxis15":{"type":"linear","autorange":false,"range":[0.40000000000000002,5.5999999999999996],"tickmode":"array","ticktext":["attacks","attack","security","time","attacker"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["attacks","attack","security","time","attacker"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0,0.23180175719006482],"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"x3","title":"","hoverformat":".2f"},"yaxis16":{"type":"linear","autorange":false,"range":[0.40000000000000002,5.5999999999999996],"tickmode":"array","ticktext":["attacks","models","vulnerability","security","attack"],"tickvals":[1,2,3,4,5],"categoryorder":"array","categoryarray":["attacks","models","vulnerability","security","attack"],"nticks":null,"ticks":"","tickcolor":null,"ticklen":3.6529680365296811,"tickwidth":0,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":10.62681610626816},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0,0.23180175719006482],"gridcolor":"rgba(235,235,235,1)","gridwidth":0,"zeroline":false,"anchor":"x4","title":"","hoverformat":".2f"},"showlegend":true,"legend":{"bgcolor":null,"bordercolor":null,"borderwidth":0,"font":{"color":"rgba(0,0,0,1)","family":"","size":11.68949771689498},"title":{"text":"","font":{"color":"rgba(0,0,0,1)","family":"","size":14.611872146118724}}},"hovermode":"closest","barmode":"relative"},"config":{"doubleClick":"reset","modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"source":"A","attrs":{"533018d4468":{"x":{},"y":{},"fill":{},"type":"bar"}},"cur_data":"533018d4468","visdat":{"533018d4468":["function (y) ","x"]},"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

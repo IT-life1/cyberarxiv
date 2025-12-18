@@ -3,6 +3,7 @@
 export(.normalize_list_to_csv)
 export(classify_data)
 export(get_arxiv_papers)
+export(get_top_words)
 export(load_publications)
 export(load_raw_data)
 export(save_raw_data)

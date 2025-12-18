@@ -113,7 +113,7 @@ save_publications <- function(data, db_path = NULL) {
   if (is.null(db_path)) db_path <- .cyberarxiv_db_path()
 
   stopifnot(is.data.frame(data))
-  required <- c("id","link","title","authors","abstract","categories","published_date","updated_date")
+  required <- c("id","link","title","authors","abstract","categories","published_date","updated_date","tag")
   miss <- setdiff(required, names(data))
   if (length(miss)) stop("Missing columns: ", paste(miss, collapse = ", "))
 
@@ -142,7 +142,7 @@ save_publications <- function(data, db_path = NULL) {
     categories     = .map_categories_to_names_csv(data$categories),
     published_date = to_time(data$published_date),
     updated_date   = to_time(data$updated_date),
-    topic          = as.character(data$topic),
+    tag = as.character(data$tag),
     stringsAsFactors = FALSE
   )
 
@@ -160,7 +160,7 @@ save_publications <- function(data, db_path = NULL) {
     published_date = s.published_date,
     updated_date = s.updated_date,
     ingested_at = now(),
-    topic = COALESCE(NULLIF(trim(s.topic), ''), p.topic)
+    tag = COALESCE(NULLIF(trim(s.tag), ''), p.tag)
   FROM stg_papers AS s
   WHERE p.paper_id = s.paper_id
     AND s.paper_id IS NOT NULL
@@ -176,11 +176,11 @@ save_publications <- function(data, db_path = NULL) {
   inserted <- DBI::dbExecute(con, "
   INSERT INTO papers (
     paper_id, link, title, authors, abstract,
-    categories, published_date, updated_date, topic
+    categories, published_date, updated_date, tag
   )
   SELECT
     s.paper_id, s.link, s.title, s.authors, s.abstract,
-    s.categories, s.published_date, s.updated_date, s.topic
+    s.categories, s.published_date, s.updated_date, s.tag
   FROM stg_papers s
   WHERE s.paper_id IS NOT NULL
     AND s.paper_id <> ''
