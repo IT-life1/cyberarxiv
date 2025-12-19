@@ -14,23 +14,27 @@ serve_dashboard(
 )
 }
 \arguments{
-\item{source}{Path to a Quarto \code{.qmd} file. If \code{NULL}, the embedded template from \code{render_dashboard()} is used.}
+\item{source}{Path to a Quarto \code{.qmd} file. If NULL, uses embedded template.}
 
-\item{output_dir}{Directory where the rendered dashboard files are written before being served. Defaults to \verb{/var/www/html}.}
+\item{output_dir}{Directory where the rendered HTML (dashboard.html) will be written.
+Defaults to \verb{_site}.}
 
-\item{quiet}{Logical; forwarded to \code{render_dashboard()} (and ultimately \code{quarto::quarto_render()}) to control verbosity.}
+\item{quiet}{Logical; passed through to \code{quarto::quarto_render()} for verbose output.}
 
-\item{nginx_exec}{Path to the \code{nginx} executable. Defaults to \code{Sys.which("nginx")}.}
+\item{nginx_exec}{Полный путь к бинарю \code{nginx}. По умолчанию используется
+\code{Sys.which("nginx")}.}
 
-\item{nginx_args}{Command-line arguments supplied to \code{nginx}. The default keeps the master process in the foreground via \code{daemon off;}.}
+\item{nginx_args}{Вектор аргументов командной строки, передаваемых в \code{nginx}.
+По умолчанию — \code{c("-g", "daemon off;")}, чтобы сервер работал на переднем
+плане.}
 
-\item{...}{Additional arguments passed through to \code{render_dashboard()}.}
+\item{...}{Additional arguments passed to \code{quarto::quarto_render()}.}
 }
 \value{
-Returns (invisibly) the exit status from the \code{nginx} process.
+Невидимо возвращает код завершения процесса \code{nginx}.
 }
 \description{
-Рендерит дашборд (по умолчанию во \code{/var/www/html}) и запускает \code{nginx}
-в режиме \code{daemon off;} для обслуживания статических файлов. Функция блокирует
+Рендерит дашборд (по умолчанию во \verb{/var/www/html}) и запускает \code{nginx}
+в режиме \verb{daemon off;}, чтобы отдавать статические файлы. Функция блокирует
 выполнение, пока веб-сервер работает.
 }
