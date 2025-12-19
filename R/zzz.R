@@ -1,5 +1,6 @@
 #' Package startup helpers
 #'
+#' @name cyberarxiv-package
 #' @importFrom dplyr filter
 ## Declare known global variables to satisfy R CMD check for dplyr pipelines
 if (getRversion() >= "2.15.1") {
