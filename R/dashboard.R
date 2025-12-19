@@ -15,6 +15,9 @@ render_dashboard <- function(source = NULL,
                              quiet = TRUE,
                              ...) {
   dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
+  if (!dir.exists(output_dir)) {
+    stop("Failed to create output_dir at ", output_dir)
+  }
 
   if (!requireNamespace("quarto", quietly = TRUE)) {
     stop("Package 'quarto' is required to render the Quarto dashboard.")
@@ -60,7 +63,9 @@ render_dashboard <- function(source = NULL,
   }
 
   destination_html <- file.path(output_dir, "dashboard.html")
-  file.copy(rendered_html, destination_html, overwrite = TRUE)
+  if (!isTRUE(file.copy(rendered_html, destination_html, overwrite = TRUE))) {
+    stop("Unable to copy rendered dashboard to ", destination_html)
+  }
 
   rendered_assets <- sub("\\.html$", "_files", rendered_html)
   if (dir.exists(rendered_assets)) {

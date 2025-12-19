@@ -36,8 +36,11 @@ RUN echo 'options(repos = c(P3M = "https://packagemanager.posit.co/cran/__linux_
 # 3) Ускоряем сборку из исходников (если вдруг всё же придётся компилить)
 ENV MAKEFLAGS="-j$(nproc)"
 
-# 4) Базовые R инструменты: remotes для установки из GitHub
-RUN R -e 'install.packages("remotes", repos = c(CRAN = "https://cloud.r-project.org"))'
+# 4) Ставим pak (наш менеджер пакетов)
+RUN R -e 'install.packages("pak", repos = c(CRAN = "https://cloud.r-project.org"))'
+
+# 4a) Собираем stringi из исходников через pak, чтобы он линкуется с системным ICU
+RUN R -e 'pak::pkg_install("stringi", ask = FALSE)'
 
 # 5) Устанавливаем Quarto CLI для `quarto::quarto_render()`
 RUN wget -q -O /tmp/quarto.deb https://quarto.org/download/latest/quarto-linux-amd64.deb \
@@ -45,8 +48,8 @@ RUN wget -q -O /tmp/quarto.deb https://quarto.org/download/latest/quarto-linux-a
  && apt-get install -y --no-install-recommends /tmp/quarto.deb \
  && rm -rf /var/lib/apt/lists/* /tmp/quarto.deb
 
-# 6) Ставим пакет напрямую из GitHub (вместе со всеми зависимостями)
-RUN R -e 'remotes::install_github("IT-life1/cyberarxiv", dependencies = TRUE, upgrade = "never")'
+# 6) Ставим пакет напрямую из GitHub (вместе со всеми зависимостями) через pak
+RUN R -e 'pak::pkg_install("IT-life1/cyberarxiv", dependencies = TRUE, ask = FALSE)'
 
 # 7) Копируем docker-скрипты проекта внутрь образа
 COPY docker/ /srv/cyberarxiv/docker/
