@@ -38,8 +38,14 @@ render_dashboard <- function(engine = c("rmarkdown", "quarto"),
     if (!requireNamespace("quarto", quietly = TRUE)) {
       stop("Package 'quarto' is required to render the Quarto dashboard.")
     }
-    quarto::quarto_render(src, output_dir = output_dir, ...)
-    output_file <- file.path(output_dir, "dashboard.html")
+    output_basename <- "dashboard.html"
+    quarto::quarto_render(src, output_file = output_basename, ...)
+    rendered_file <- file.path(dirname(src), output_basename)
+    if (!file.exists(rendered_file)) {
+      stop("Quarto render did not produce ", rendered_file)
+    }
+    output_file <- file.path(output_dir, output_basename)
+    file.copy(rendered_file, output_file, overwrite = TRUE)
   }
 
   if (open_browser && file.exists(output_file)) {
