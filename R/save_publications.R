@@ -105,6 +105,14 @@
 
 
 
+#' Save arXiv publications to DuckDB (single table)
+#'
+#' Write a data.frame of arXiv papers into the package DuckDB database.
+#'
+#' @param data data.frame as returned by `get_arxiv_papers()` or processed data
+#' @param db_path optional path to duckdb file (default: package db path)
+#' @return invisible list with `inserted`, `updated`, and `skipped` counts
+#' @export
 save_publications <- function(data, db_path = NULL) {
   if (is.null(db_path)) db_path <- .cyberarxiv_db_path()
 

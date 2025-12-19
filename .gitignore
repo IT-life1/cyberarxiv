@@ -3,6 +3,7 @@
 .Rhistory
 .RData
 .Ruserdata
+.Rprofile
 
 .Rcheck/
 *.tar.gz
@@ -10,6 +11,7 @@
 renv/library/
 renv/cache/
 renv/staging/
+renv/activate.R
 
 inst/quarto/_book/
 inst/quarto/**/_cache/
@@ -51,3 +53,5 @@ venv/
 
 check/
 
+
+/.quarto/

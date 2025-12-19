@@ -22,6 +22,7 @@ Imports:
     DBI,
     dplyr,
     tidytext,
+    stopwords,
     stringr,
     magrittr,
     tibble
@@ -33,7 +34,6 @@ Suggests:
     yaml,
     plotly,
     here,
-    stopwords,
     igraph,
     tidyr
 Config/testthat/edition: 3

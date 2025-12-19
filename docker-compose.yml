@@ -1,9 +1,6 @@
-version: "3.8"
-
 services:
   app:
     build: .
-    image: cyberarxiv:latest
     container_name: cyberarxiv-etl
     restart: "no"
     environment:
@@ -14,7 +11,7 @@ services:
     command: ["Rscript", "/srv/cyberarxiv/docker/run_etl.R"]
 
   web:
-    image: cyberarxiv:latest
+    build: .
     container_name: cyberarxiv-web
     depends_on:
       - app
