@@ -2,34 +2,29 @@
 % Please edit documentation in R/dashboard.R
 \name{render_dashboard}
 \alias{render_dashboard}
-\title{Render the cyberarxiv dashboards}
+\title{Render the cyberarxiv Quarto dashboard}
 \usage{
 render_dashboard(
-  engine = c("rmarkdown", "quarto"),
+  source = NULL,
   output_dir = "_site",
   open_browser = interactive(),
   ...
 )
 }
 \arguments{
-\item{engine}{Either "rmarkdown" (default) or "quarto" to select which
-dashboard source to render.}
+\item{source}{Path to a Quarto \code{.qmd} file. If NULL, uses embedded template.}
 
-\item{output_dir}{Directory where the rendered HTML (dashboard.html) will be
-written. Defaults to \verb{_site} to align with the existing scripts.}
+\item{output_dir}{Directory where the rendered HTML (dashboard.html) will be written.
+Defaults to \verb{_site}.}
 
-\item{open_browser}{Logical; if TRUE (default when interactive) the rendered
-HTML file is opened via \code{utils::browseURL()}.}
+\item{open_browser}{Logical; if TRUE (default when interactive) opens result in a browser.}
 
-\item{...}{Additional arguments passed to \code{rmarkdown::render()} when
-\code{engine = "rmarkdown"} or to \code{quarto::quarto_render()} when
-\code{engine = "quarto"}.}
+\item{...}{Additional arguments passed to \code{quarto::quarto_render()}.}
 }
 \value{
 Invisibly returns the path to the rendered HTML file.
 }
 \description{
-This helper renders either the lightweight R Markdown dashboard
-(docker/dashboard.Rmd) or the richer Quarto dashboard
-(inst/quarto/dashboard.qmd) and optionally opens the result in a browser.
+Рендерит Quarto-дашборд. Если source = NULL, используется встроенный шаблон
+(лежит прямо в этом R-файле), без необходимости хранить inst/quarto/dashboard.qmd.
 }

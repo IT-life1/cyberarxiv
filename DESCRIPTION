@@ -25,15 +25,13 @@ Imports:
     stopwords,
     stringr,
     magrittr,
-    tibble
-Suggests:
-    testthat (>= 3.0.0),
-    rmarkdown,
-    knitr,
-    rcmdcheck,
-    yaml,
+    tibble,
     plotly,
-    here,
+    lubridate,
     igraph,
-    tidyr
+    tidyr,
+    ggplot2,
+    RColorBrewer,
+    quarto,
+    testthat
 Config/testthat/edition: 3
