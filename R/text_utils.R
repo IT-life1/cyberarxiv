@@ -1,15 +1,15 @@
-#' Извлечь топ-N слов из аннотаций
+#' Extract top-N words from abstracts
 #'
-#' Обрабатывает аннотации: очистка, токенизация, фильтрация стоп-слов,
-#' и возвращает топ слов.
+#' Processes abstracts: cleaning, tokenization, stopword filtering,
+#' and returns top words.
 #'
-#' @param data data.frame с колонкой `abstract`
-#' @param n integer, сколько топ-слов вернуть (по умолчанию 30)
-#' @return tibble с колонками `word`, `n`
+#' @param data data.frame with column abstract
+#' @param n integer, number of top words to return (default: 30)
+#' @return tibble with columns word, n
 #' @export
 get_top_words <- function(data, n = 30) {
   if (!"abstract" %in% names(data)) {
-    stop("Ожидается колонка 'abstract'")
+    stop("Column 'abstract' is expected")
   }
 
   custom_stopwords <- c(
