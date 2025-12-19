@@ -1,43 +1,112 @@
-![R-CMD-check](https://github.com/IT-life1/cyberarxiv/actions/workflows/R-CMD-check.yml/badge.svg)
-
 # cyberarxiv
 
-R-пакет для сбора, хранения и анализа научных публикаций arXiv
-по тематике кибербезопасности.
+R-пакет для автоматического сбора, классификации и анализа научных публикаций по кибербезопасности с arXiv. 
 
-## Docker Compose
+Проект был разработан в рамках учебного курса информационно-аналитические технологии поиска угроз информационной безопасности. Мы хотели создать инструмент, который автоматически собирает статьи по кибербезопасности, классифицирует их по темам и визуализирует результаты в удобном дашборде.
 
-This repository includes a `docker-compose.yml` that builds the package image and provides two services:
+## Что делает этот проект?
 
-- `app` — runs the ETL (`docker/run_etl.R`) and writes data into `./data`.
-- `web` — renders (if needed) and serves the dashboard static site at http://localhost:8000.
+Проект реализует полный ETL-пайплайн:
 
-Usage:
+1. **Скачивание статей** - автоматически получает публикации с arXiv по заданным критериям
+2. **Сохранение сырых данных** - сохраняет исходные данные в формате `.rds` для бэкапа
+3. **Классификация** - автоматически определяет тематику статей (malware, cryptography, ML security и т.д.)
+4. **Хранение в БД** - сохраняет классифицированные данные в DuckDB
+5. **Визуализация** - создает интерактивный дашборд с графиками и статистикой
 
-1. Build and start services in background:
+## Быстрый старт
 
-```bash
-docker-compose up --build -d
-```
+### Через Docker (рекомендуется)
 
-2. Visit the dashboard at: http://localhost:8000
-
-3. The package data directory on the host is `./data` and is mounted into the container at `/srv/cyberarxiv/data` so DB updates persist across restarts.
-
-Run only the web service (after a prior ETL) with:
+Самый простой способ запустить проект - использовать Docker Compose:
 
 ```bash
-docker-compose up --build -d web
+
+git clone https://github.com/IT-life1/cyberarxiv.git
+cd cyberarxiv
+
+docker-compose up --build
 ```
 
-To run the ETL once:
+После запуска дашборд будет доступен по адресу: **http://localhost:8000**
 
-```bash
-docker-compose run --rm app
+### Что происходит при запуске?
+
+1. Собирается Docker-образ с R и всеми зависимостями
+2. Запускается ETL-пайплайн:
+   - Скачиваются статьи с arXiv (по умолчанию 1000 статей)
+   - Данные сохраняются в `./raw-data/arxiv_papers.rds`
+   - Статьи классифицируются по темам
+   - Результаты сохраняются в `./data/cyberarxiv.duckdb`
+3. Рендерится и запускается дашборд на порту 8000
+
+### Настройка параметров
+
+Можно настроить количество статей и поисковый запрос через переменные окружения в `docker-compose.yml`:
+
+```yaml
+environment:
+  - MAX_RESULTS=1000    # Сколько статей скачать
+  - QUERY=              # Поисковый запрос
 ```
 
-Notes:
+## Установка как R-пакет
 
-- The Docker image is built from the project root and installs package dependencies via `renv::restore()` if `renv.lock` is present.
-- If you need a database container (Postgres) instead of a file-based DB, I can add a `db` service and update the package configuration.
+Если хотите использовать пакет локально в R:
 
+```r
+# Установка через remotes
+remotes::install_github("IT-life1/cyberarxiv")
+```
+
+### Пример использования
+
+```r
+library(cyberarxiv)
+
+# Скачать 100 статей
+papers <- get_arxiv_papers(max_results = 100)
+
+# Сохранить сырые данные
+save_raw_data(papers)
+
+# Загрузить и классифицировать
+raw_data <- load_raw_data()
+classified <- classify_data(raw_data)
+
+# Сохранить в БД
+save_publications(classified)
+
+# Загрузить из БД
+publications <- load_publications()
+
+# Поиск по тексту
+results <- search_papers(publications, query = "malware", year = 2024)
+
+# Рендерить дашборд
+render_dashboard(output_dir = "dashboard")
+```
+
+## Архитектура проекта
+
+```
+cyberarxiv/
+├── R/                    # Исходный код пакета
+│   ├── get_arxiv_papers.R    # Скачивание с arXiv
+│   ├── raw_data.R            # Работа с сырыми данными
+│   ├── classify_data.R       # Классификация статей
+│   ├── save_publications.R   # Сохранение в БД
+│   ├── load_publications.R   # Загрузка из БД
+│   ├── dashboard.R           # Рендеринг дашборда
+│   ├── db.r                  # Создание БД
+│   ├── text_utils.R          # Выделение ключевых слов
+│   └── serve_dashboard.R     # HTTP сервер для дашборда
+├── docker/
+│   ├── run_etl.R             # ETL скрипт
+│   ├── run_dashboard.R       # Скрипт запуска дашборда
+│   └── start.sh              # Главный скрипт запуска
+├── inst/quarto/
+│   └── dashboard.qmd         # Шаблон дашборда
+├── Dockerfile                # Образ для контейнеризации
+└── docker-compose.yml        # Конфигурация Docker Compose
+```

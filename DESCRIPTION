@@ -2,10 +2,10 @@ Package: cyberarxiv
 Title: arXiv Cybersecurity Publications ETL and Analytics
 Version: 0.0.1
 Authors@R: c(
-    person("Zvonov", "", role = "aut"),
+    person("Zvonov", "", role = "aut", email = "aleksandr.zwonov@yandex.ru"),
     person("Kondrashkin", "", role = "aut", email = "alexkondrol@yandex.ru"),
     person("Dolgov", "", role = "aut", email = "dolgov18012005@yandex.ru"),
-    person("Trembachev", "", role = "aut"),
+    person("Trembachev", "", role = "aut", email = "trembochev@yandex.ru" ),
     person("Mozgov", "", role = c("aut", "cre"), email = "IT-life1@yandex.com")
     )
 Description: Collects arXiv papers related to cybersecurity, stores them locally,

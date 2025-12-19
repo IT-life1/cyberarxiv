@@ -2,14 +2,14 @@
 % Please edit documentation in R/serve_dashboard.R
 \name{serve_dashboard}
 \alias{serve_dashboard}
-\title{Render and serve the cyberarxiv dashboard via nginx}
+\title{Render and serve the cyberarxiv dashboard via httpuv}
 \usage{
 serve_dashboard(
   source = NULL,
   output_dir = "/var/www/html",
   quiet = TRUE,
-  nginx_exec = Sys.which("nginx"),
-  nginx_args = c("-g", "daemon off;"),
+  host = "0.0.0.0",
+  port = 8000,
   ...
 )
 }
@@ -21,20 +21,17 @@ Defaults to \verb{_site}.}
 
 \item{quiet}{Logical; passed through to \code{quarto::quarto_render()} for verbose output.}
 
-\item{nginx_exec}{Полный путь к бинарю \code{nginx}. По умолчанию используется
-\code{Sys.which("nginx")}.}
+\item{host}{Хост для прослушивания (по умолчанию "0.0.0.0").}
 
-\item{nginx_args}{Вектор аргументов командной строки, передаваемых в \code{nginx}.
-По умолчанию — \code{c("-g", "daemon off;")}, чтобы сервер работал на переднем
-плане.}
+\item{port}{Порт для прослушивания (по умолчанию 8000).}
 
 \item{...}{Additional arguments passed to \code{quarto::quarto_render()}.}
 }
 \value{
-Невидимо возвращает код завершения процесса \code{nginx}.
+Невидимо возвращает сервер (функция блокирует выполнение).
 }
 \description{
-Рендерит дашборд (по умолчанию во \verb{/var/www/html}) и запускает \code{nginx}
-в режиме \verb{daemon off;}, чтобы отдавать статические файлы. Функция блокирует
+Рендерит дашборд (по умолчанию во \verb{/var/www/html}) и запускает HTTP сервер
+на основе \code{httpuv} для раздачи статических файлов. Функция блокирует
 выполнение, пока веб-сервер работает.
 }
