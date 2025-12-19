@@ -36,8 +36,15 @@ jobs:
           if (!requireNamespace("rcmdcheck", quietly = TRUE)) {
             install.packages("rcmdcheck", repos = "https://cloud.r-project.org")
           }
+      - name: Ensure testthat is available (for checking suggestions)
+        shell: Rscript {0}
+        run: |
+          if (!requireNamespace("testthat", quietly = TRUE)) {
+            install.packages("testthat", repos = "https://cloud.r-project.org")
+          }
 
       - uses: r-lib/actions/check-r-package@v2
         with:
+          error-on: '"error"'
           args: 'c("--no-manual", "--ignore-vignettes")'
           build_args: 'c("--no-manual")'

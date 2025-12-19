@@ -312,7 +312,7 @@ classify_data <- function(data) {
     }
     
     abstract_lower <- tolower(abstract)
-    scores <- numeric(length(predefined_tags) - 1)  # без "other"
+    scores <- numeric(length(predefined_tags) - 1)  # without "other"
     names(scores) <- predefined_tags[1:(length(predefined_tags)-1)]
     
     for (tag_name in names(scores)) {
@@ -349,7 +349,7 @@ classify_data <- function(data) {
   
   create_topic_tags <- function(data) {
     if (!"abstract" %in% names(data)) {
-      stop("Колонка 'abstract' отсутствует в данных")
+      stop("Column 'abstract' is missing from data")
     }
     
     data$tag <- sapply(data$abstract, classify_by_keywords)

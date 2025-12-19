@@ -4,10 +4,7 @@
 #' @param db_path optional path to duckdb file (default: data/cyberarxiv.duckdb or env/option)
 #' @return invisible list(stats)
 #' @export
-#' 
-#' 
-
-
+#' @noRd
 .normalize_list_to_csv <- function(x) {
   # "A; B; C" -> "A, B, C"
   vapply(x, function(s) {
@@ -172,7 +169,7 @@ save_publications <- function(data, db_path = NULL) {
     );
 ")
 
-  # 2) INSERT новых paper_id
+  # 2) INSERT new paper_id
   inserted <- DBI::dbExecute(con, "
   INSERT INTO papers (
     paper_id, link, title, authors, abstract,
