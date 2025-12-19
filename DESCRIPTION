@@ -23,13 +23,14 @@ Imports:
     dplyr,
     tidyr,
     stringr,
+    magrittr,
+    tibble,
     plotly,
     here,
     tidytext,
     stopwords,
     igraph
 Suggests:
-    tibble,
     testthat (>= 3.0.0),
     rmarkdown,
     knitr,
