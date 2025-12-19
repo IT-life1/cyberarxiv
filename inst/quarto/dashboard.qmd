@@ -1,8 +1,6 @@
 ---
 title: "Анализ публикаций arXiv"
 format: html
-project:
-  execute-dir: project
 execute:
   echo: false
   warning: false
@@ -10,28 +8,17 @@ execute:
 ---
 
 ```{r}
-library(here)
+library(cyberarxiv)
 
-old_wd <- getwd()
-
-setwd(here())
-
-library(tidyverse)
-library(plotly)
+library(dplyr)
+library(stringr)
+library(tidyr)
 library(lubridate)
+library(plotly)
 library(tidytext)
 library(igraph)
 
-source(here("R", "classify_data.R"))
-source(here("R", "get_arxiv_papers.R"))
-source(here("R", "load_publications.R"))
-source(here("R", "raw_data.R"))
-source(here("R", "save_publications.R"))
-source(here("R", "db.R"))
-source(here::here("R", "text_utils.R"))
-
-
-final_data <- load_publications() %>%
+final_data <- cyberarxiv::load_publications() %>%
   mutate(
     published_month = floor_date(published_date, "day"),
     published_weekday = wday(published_date, label = TRUE, abbr = TRUE)
@@ -43,21 +30,17 @@ authors_long <- final_data %>%
   unnest(authors) %>%
   mutate(authors = str_trim(authors))
 
-pubs_by_month <- final_data %>%
-  count(published_month) %>%
-  arrange(published_month)
+pubs_by_month <- final_data %>% count(published_month) %>% arrange(published_month)
 
-top_authors <- authors_long %>%
-  count(authors, sort = TRUE) %>%
-  head(10)
+top_authors <- authors_long %>% count(authors, sort = TRUE) %>% head(10)
 
-tag_counts <- final_data %>%
-  count(tag, sort = TRUE)
+tag_counts <- final_data %>% count(tag, sort = TRUE)
 
 pubs_by_weekday <- final_data %>%
   count(published_weekday) %>%
   mutate(published_weekday = factor(published_weekday,
-                                    levels = c("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")))
+    levels = c("Пн","Вт","Ср","Чт","Пт","Сб","Вс")
+  ))
 
 author_counts <- final_data %>%
   filter(!is.na(authors)) %>%
