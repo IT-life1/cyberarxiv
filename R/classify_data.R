@@ -369,11 +369,11 @@ classify_data <- function(data) {
 #'
 #' Pipeline that fetches papers from arXiv API (Atom) converts it by classifing and updates database.
 #'
-#' @param max_results How many papers to load (integer).
+#' @param cmax_results How many papers to load (integer).
 #'
 #' @export
-etl <- function(_max_results) {
-  save_raw_data(get_arxiv_papers(max_results = _max_results))
+etl <- function(cmax_results) {
+  save_raw_data(get_arxiv_papers(max_results = cmax_results))
   data <- load_raw_data()
   papers <- classify_data(data)
   save_publications(papers)
