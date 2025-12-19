@@ -30,13 +30,8 @@ source(here("R", "save_publications.R"))
 source(here("R", "db.R"))
 source(here::here("R", "text_utils.R"))
 
-save_raw_data(get_arxiv_papers(max_results = 100))
-data <- load_raw_data()
-papers <- classify_data(data)
-save_publications(papers)
-final_data <- load_publications()
 
-final_data <- final_data %>%
+final_data <- load_publications() %>%
   mutate(
     published_month = floor_date(published_date, "day"),
     published_weekday = wday(published_date, label = TRUE, abbr = TRUE)
