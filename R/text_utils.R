@@ -44,7 +44,7 @@ get_top_words <- function(data, n = 30) {
   )
   
   top_words <- data %>%
-    filter(!is.na(abstract)) %>%
+    dplyr::filter(!is.na(abstract)) %>%
     select(abstract) %>%
     mutate(
       abstract = tolower(abstract),
@@ -105,7 +105,7 @@ get_top_words_by_tag <- function(data, n = 5) {
   )
   
   result <- data %>%
-    filter(!is.na(abstract) & !is.na(tag) & tag != "other") %>%
+    dplyr::filter(!is.na(abstract) & !is.na(tag) & tag != "other") %>%
     select(tag, abstract) %>%
     mutate(
       abstract = tolower(abstract),

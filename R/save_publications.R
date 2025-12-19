@@ -3,7 +3,6 @@
 #' @param data data.frame from get_arxiv_papers()
 #' @param db_path optional path to duckdb file (default: data/cyberarxiv.duckdb or env/option)
 #' @return invisible list(stats)
-#' @export
 #' @noRd
 .normalize_list_to_csv <- function(x) {
   # "A; B; C" -> "A, B, C"

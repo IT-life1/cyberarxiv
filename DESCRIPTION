@@ -21,19 +21,19 @@ Imports:
     duckdb,
     DBI,
     dplyr,
-    tidyr,
+    tidytext,
     stringr,
     magrittr,
-    tibble,
-    plotly,
-    here,
-    tidytext,
-    stopwords,
-    igraph
+    tibble
 Suggests:
     testthat (>= 3.0.0),
     rmarkdown,
     knitr,
     rcmdcheck,
-    yaml
+    yaml,
+    plotly,
+    here,
+    stopwords,
+    igraph,
+    tidyr
 Config/testthat/edition: 3
