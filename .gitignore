@@ -11,6 +11,7 @@
 renv/library/
 renv/cache/
 renv/staging/
+renv/activate.R
 
 inst/quarto/_book/
 inst/quarto/**/_cache/
