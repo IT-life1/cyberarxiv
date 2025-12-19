@@ -30,5 +30,7 @@ Suggests:
     tibble,
     testthat (>= 3.0.0),
     rmarkdown,
-    knitr
+    knitr,
+    rcmdcheck,
+    yaml
 Config/testthat/edition: 3
