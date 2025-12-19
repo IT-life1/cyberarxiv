@@ -30,7 +30,6 @@ source(here("R", "save_publications.R"))
 source(here("R", "db.R"))
 source(here::here("R", "text_utils.R"))
 
-etl(cmax_results = 100)
 
 final_data <- load_publications() %>%
   mutate(
