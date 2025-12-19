@@ -25,7 +25,11 @@ jobs:
             libcurl4-openssl-dev \
             libssl-dev \
             libxml2-dev \
-            pkg-config
+            pkg-config \
+            libglpk-dev
+
+      - name: Install CI helper packages
+        run: Rscript -e 'install.packages(c("yaml","rcmdcheck"), repos = "https://cloud.r-project.org")'
 
       - name: Cache renv
         uses: actions/cache@v4
