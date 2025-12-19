@@ -20,6 +20,7 @@ RUN --mount=type=cache,target=/var/cache/apt \
             libpng-dev \
             libjpeg-dev \
             libicu-dev \
+            libicu70 \
             nginx \
             python3 \
             wget \
