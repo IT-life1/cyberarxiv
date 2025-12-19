@@ -50,7 +50,7 @@ load_publications <- function(db_path = NULL,
   sql <- "
     SELECT
       paper_id, link, title, authors, abstract, categories,
-      published_date, updated_date, ingested_at, topic
+      published_date, updated_date, ingested_at, tag
     FROM papers
   "
   where <- character(0)
@@ -113,6 +113,7 @@ load_publications <- function(db_path = NULL,
     published_date = as.POSIXct(character(0), tz = "UTC"),
     updated_date = as.POSIXct(character(0), tz = "UTC"),
     ingested_at = as.POSIXct(character(0), tz = "UTC"),
+    tag = character(0),
     stringsAsFactors = FALSE
   )
   if (requireNamespace("tibble", quietly = TRUE)) tibble::as_tibble(df) else df

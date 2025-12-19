@@ -39,7 +39,9 @@
       published_date  TIMESTAMP,
       updated_date    TIMESTAMP,
       ingested_at     TIMESTAMP DEFAULT now(),
-      topic           VARCHAR
+      tag             VARCHAR,
+      umap_x          DOUBLE,
+      umap_y          DOUBLE
     );
   ")
 

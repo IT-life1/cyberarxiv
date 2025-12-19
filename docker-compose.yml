@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    image: cyberarxiv:latest
+    container_name: cyberarxiv-etl
+    restart: "no"
+    environment:
+      - MAX_RESULTS=100
+      - QUERY=
+    volumes:
+      - ./data:/srv/cyberarxiv/data
+    command: ["Rscript", "/srv/cyberarxiv/docker/run_etl.R"]
+
+  web:
+    image: cyberarxiv:latest
+    container_name: cyberarxiv-web
+    depends_on:
+      - app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/srv/cyberarxiv/data
+      - ./:/srv/cyberarxiv:ro
+    command: ["/srv/cyberarxiv/docker/serve_dashboard.sh"]
+    restart: unless-stopped

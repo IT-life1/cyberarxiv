@@ -4,7 +4,7 @@ Version: 0.0.1
 Authors@R: c(
     person("Zvonov", "", role = "aut"),
     person("Kondrashkin", "", role = "aut", email = "alexkondrol@yandex.ru"),
-    person("Dolgov", "", role = "aut"),
+    person("Dolgov", "", role = "aut", email = "dolgov18012005@yandex.ru"),
     person("Trembachev", "", role = "aut"),
     person("Mozgov", "", role = c("aut", "cre"), email = "IT-life1@yandex.com")
     )
@@ -19,10 +19,21 @@ Imports:
     httr2,
     xml2,
     duckdb,
-    DBI
+    DBI,
+    dplyr,
+    tidytext,
+    stringr,
+    magrittr,
+    tibble
 Suggests:
-    tibble,
     testthat (>= 3.0.0),
     rmarkdown,
-    knitr
+    knitr,
+    rcmdcheck,
+    yaml,
+    plotly,
+    here,
+    stopwords,
+    igraph,
+    tidyr
 Config/testthat/edition: 3
