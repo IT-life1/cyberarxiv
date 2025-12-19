@@ -33,6 +33,5 @@ Imports:
     ggplot2,
     RColorBrewer,
     quarto,
-    httpuv,
     testthat
 Config/testthat/edition: 3
