@@ -6,20 +6,21 @@
 #' @param source Path to a Quarto `.qmd` file. If NULL, uses embedded template.
 #' @param output_dir Directory where the rendered HTML (dashboard.html) will be written.
 #'   Defaults to `_site`.
-#' @param open_browser Logical; if TRUE (default when interactive) opens result in a browser.
+#' @param quiet Logical; passed through to `quarto::quarto_render()` for verbose output.
 #' @param ... Additional arguments passed to `quarto::quarto_render()`.
 #'
-#' @return Invisibly returns the path to the rendered HTML file.
 #' @export
 render_dashboard <- function(source = NULL,
                              output_dir = "_site",
-                             open_browser = interactive(),
+                             quiet = TRUE,
                              ...) {
   dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
 
   if (!requireNamespace("quarto", quietly = TRUE)) {
     stop("Package 'quarto' is required to render the Quarto dashboard.")
   }
+
+  dashboard_ctx <- .prepare_dashboard_context()
 
   staging_root <- file.path(
     tempdir(),
@@ -30,6 +31,7 @@ render_dashboard <- function(source = NULL,
 
   staging_dir <- file.path(staging_root, "src")
   dir.create(staging_dir, recursive = TRUE, showWarnings = FALSE)
+  saveRDS(dashboard_ctx, file.path(staging_dir, "dashboard-data.rds"))
 
   staged_source <- if (is.null(source)) {
     .materialize_embedded_dashboard(staging_dir)
@@ -40,245 +42,266 @@ render_dashboard <- function(source = NULL,
     file.path(staging_dir, basename(source))
   }
 
+  old_dir <- getwd()
+  on.exit(setwd(old_dir), add = TRUE)
+  setwd(staging_dir)
+
   quarto::quarto_render(
-    input       = staged_source,
-    output_dir  = staging_dir,
+    input = basename(staged_source),
     output_file = "dashboard.html",
     execute_dir = staging_dir,
-    quiet       = TRUE,
+    quiet = quiet,
     ...
   )
 
-  rendered_file <- file.path(staging_dir, "dashboard.html")
-  if (!file.exists(rendered_file)) {
-    stop("Quarto render did not produce ", rendered_file)
+  rendered_html <- file.path(staging_dir, "dashboard.html")
+  if (!file.exists(rendered_html)) {
+    stop("Quarto render did not create dashboard.html")
   }
 
-  output_file <- file.path(output_dir, "dashboard.html")
-  file.copy(rendered_file, output_file, overwrite = TRUE)
+  destination_html <- file.path(output_dir, "dashboard.html")
+  file.copy(rendered_html, destination_html, overwrite = TRUE)
 
-  # ассеты обычно "dashboard_files" или "<input>_files"
-  support_src <- file.path(staging_dir, "dashboard_files")
-  if (!dir.exists(support_src)) {
-    alt <- file.path(
-      staging_dir,
-      paste0(tools::file_path_sans_ext(basename(staged_source)), "_files")
+  rendered_assets <- sub("\\.html$", "_files", rendered_html)
+  if (dir.exists(rendered_assets)) {
+    destination_assets <- file.path(output_dir, basename(rendered_assets))
+    if (dir.exists(destination_assets)) {
+      unlink(destination_assets, recursive = TRUE, force = TRUE)
+    }
+    dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+    file.copy(rendered_assets, output_dir, recursive = TRUE, overwrite = TRUE)
+  }
+
+  invisible(destination_html)
+}
+
+#' @noRd
+.prepare_dashboard_context <- function() {
+  final_data <- load_publications()
+  has_data <- nrow(final_data) > 0
+
+  final_aug <- final_data %>%
+    mutate(
+      published_month = lubridate::floor_date(published_date, "day"),
+      published_weekday = lubridate::wday(published_date, label = TRUE, abbr = TRUE)
     )
-    if (dir.exists(alt)) support_src <- alt
-  }
 
-  if (dir.exists(support_src)) {
-    support_dst <- file.path(output_dir, basename(support_src))
-    if (dir.exists(support_dst)) unlink(support_dst, recursive = TRUE, force = TRUE)
-    ok <- file.copy(support_src, output_dir, recursive = TRUE)
-    if (!ok) stop("Failed to copy rendered dashboard assets from staging area")
-  }
+  authors_long <- final_aug %>%
+    select(paper_id, authors) %>%
+    filter(!is.na(authors)) %>%
+    mutate(authors = stringr::str_split(authors, ",\\s*")) %>%
+    tidyr::unnest(authors) %>%
+    mutate(authors = stringr::str_trim(authors))
 
-  output_file <- normalizePath(output_file, winslash = "/", mustWork = TRUE)
-  if (open_browser && file.exists(output_file)) {
-    utils::browseURL(output_file)
-  }
+  pubs_by_month <- final_aug %>%
+    count(published_month) %>%
+    arrange(published_month)
 
-  invisible(output_file)
+  top_authors <- authors_long %>%
+    count(authors, sort = TRUE) %>%
+    head(10)
+
+  tag_counts <- final_aug %>%
+    filter(!is.na(tag)) %>%
+    count(tag, sort = TRUE)
+
+  weekday_map <- c(
+    Mon = "Пн", Tue = "Вт", Wed = "Ср",
+    Thu = "Чт", Fri = "Пт", Sat = "Сб", Sun = "Вс"
+  )
+
+  pubs_by_weekday <- final_aug %>%
+    filter(!is.na(published_weekday)) %>%
+    mutate(
+      published_weekday = factor(
+        weekday_map[as.character(published_weekday)],
+        levels = unname(weekday_map)
+      )
+    ) %>%
+    count(published_weekday)
+
+  author_counts <- final_aug %>%
+    filter(!is.na(authors)) %>%
+    mutate(n_authors = stringr::str_count(authors, ",") + 1)
+
+  top_words <- get_top_words(final_data, n = 30)
+  topic_words <- get_top_words_by_tag(final_data, n = 5)
+
+  list(
+    has_data = has_data,
+    pubs_by_month = pubs_by_month,
+    top_authors = top_authors,
+    tag_counts = tag_counts,
+    pubs_by_weekday = pubs_by_weekday,
+    author_counts = author_counts,
+    top_words = top_words,
+    topic_words = topic_words
+  )
 }
 
-
 #' @noRd
-.materialize_embedded_dashboard <- function(target_dir) {
-  qmd_path <- file.path(target_dir, "dashboard.qmd")
-  writeLines(.dashboard_template_qmd(), qmd_path, useBytes = TRUE)
-  qmd_path
+.materialize_embedded_dashboard <- function(dest_dir) {
+  template_path <- file.path(dest_dir, "dashboard.qmd")
+  writeLines(.embedded_dashboard_template(), template_path, useBytes = TRUE)
+  template_path
 }
 
 #' @noRd
-.dashboard_template_qmd <- function() {
+.embedded_dashboard_template <- function() {
   c(
-    '---',
-    'title: "Анализ публикаций arXiv"',
-    'format: html',
-    'execute:',
-    '  echo: false',
-    '  warning: false',
-    '  message: false',
-    '---',
-    '',
-    '```{r setup}',
-    'suppressPackageStartupMessages({',
-    '  library(cyberarxiv)',
-    '  library(dplyr)',
-    '  library(plotly)',
-    '  library(lubridate)',
-    '  library(tidytext)',
-    '  library(tidyr)',
-    '  library(stringr)',
-    '  library(ggplot2)',
-    '  library(RColorBrewer)',
-    '})',
-    '',
-    '# Данные',
-    'final_data <- cyberarxiv::load_publications()',
-    'has_data <- nrow(final_data) > 0',
-    '',
-    'final_data <- final_data %>%',
-    '  mutate(',
-    '    published_month = floor_date(published_date, "day"),',
-    '    published_weekday = wday(published_date, label = TRUE, abbr = TRUE)',
-    '  )',
-    '',
-    'authors_long <- final_data %>%',
-    '  select(paper_id, authors) %>%',
-    '  filter(!is.na(authors)) %>%',
-    '  mutate(authors = str_split(authors, ",\\\\s*")) %>%',
-    '  unnest(authors) %>%',
-    '  mutate(authors = str_trim(authors))',
-    '',
-    'pubs_by_month <- final_data %>% count(published_month) %>% arrange(published_month)',
-    'top_authors <- authors_long %>% count(authors, sort = TRUE) %>% head(10)',
-    'tag_counts <- final_data %>% filter(!is.na(tag)) %>% count(tag, sort = TRUE)',
-    '',
-    'weekday_labels <- c("Mon"="Пн","Tue"="Вт","Wed"="Ср","Thu"="Чт","Fri"="Пт","Sat"="Сб","Sun"="Вс")',
-    'pubs_by_weekday <- final_data %>%',
-    '  filter(!is.na(published_weekday)) %>%',
-    '  count(published_weekday) %>%',
-    '  mutate(',
-    '    published_weekday = factor(',
-    '      weekday_labels[as.character(published_weekday)],',
-    '      levels = unname(weekday_labels)',
-    '    )',
-    '  )',
-    '',
-    'author_counts <- final_data %>%',
-    '  filter(!is.na(authors)) %>%',
-    '  mutate(n_authors = str_count(authors, ",") + 1)',
-    '',
-    'top30 <- cyberarxiv::get_top_words(final_data, n = 30)',
-    'topic_words <- cyberarxiv::get_top_words_by_tag(final_data, n = 5)',
-    '```',
-    '',
-    '```{r data-note, echo=FALSE}',
-    'if (!has_data) {',
-    '  cat("<div class=\\"alert alert-warning\\">Нет локальных данных (load_publications() вернул 0 строк). Запусти ETL/обновление базы.</div>")',
-    '}',
-    '```',
-    '',
-    '## Кол-во публикаций по дням',
-    '',
-    '```{r publ-by-day, echo=FALSE}',
-    'plot_ly(',
-    '  pubs_by_month,',
-    '  x = ~published_month,',
-    '  y = ~n,',
-    '  type = "scatter",',
-    '  mode = "lines+markers",',
-    '  line = list(color = "#9467bd", width = 2),',
-    '  marker = list(size = 6, color = "#9467bd")',
-    ') %>%',
-    '  layout(',
-    '    xaxis = list(title = "День"),',
-    '    yaxis = list(title = "Количество публикаций")',
-    '  )',
-    '```',
-    '',
-    '## Авторы с наибольшим кол-вом публикаций',
-    '',
-    '```{r authors-populars, echo=FALSE}',
-    'plot_ly(',
-    '  top_authors,',
-    '  x = ~reorder(authors, n),',
-    '  y = ~n,',
-    '  type = "bar",',
-    '  marker = list(color = "#2ca02c")',
-    ') %>%',
-    '  layout(',
-    '    xaxis = list(tickangle = -45, title = ""),',
-    '    yaxis = list(title = "Число публикаций")',
-    '  )',
-    '```',
-    '',
-    '## Процентное соотношение публикаций с метками',
-    '',
-    '```{r tags-percentage, echo=FALSE}',
-    'plot_ly(',
-    '  tag_counts,',
-    '  labels = ~tag,',
-    '  values = ~n,',
-    '  type = "pie",',
-    '  textinfo = "label+percent",',
-    '  textposition = "inside",',
-    '  marker = list(colors = RColorBrewer::brewer.pal(12, "Set3"))',
-    ') %>%',
-    '  layout(',
-    '    title = list(text = "Распределение публикаций по тематическим меткам", x = 0.5),',
-    '    showlegend = TRUE',
-    '  )',
-    '```',
-    '',
-    '## Число публикаций по дням недели',
-    '',
-    '```{r publications-by-weekday, echo=FALSE}',
-    'plot_ly(',
-    '  pubs_by_weekday,',
-    '  x = ~published_weekday,',
-    '  y = ~n,',
-    '  type = "bar",',
-    '  marker = list(color = "#9467bd")',
-    ') %>%',
-    '  layout(',
-    '    xaxis = list(title = "День недели"),',
-    '    yaxis = list(title = "Количество")',
-    '  )',
-    '```',
-    '',
-    '## Самые частые слова в аннотациях',
-    '',
-    '```{r top-words-all, echo=FALSE}',
-    'plot_ly(',
-    '  top30,',
-    '  x = ~reorder(word, n),',
-    '  y = ~n,',
-    '  type = "bar",',
-    '  marker = list(color = "#2ca02c")',
-    ') %>%',
-    '  layout(',
-    '    xaxis = list(title = "", tickangle = -45),',
-    '    yaxis = list(title = "Частота")',
-    '  )',
-    '```',
-    '',
-    '## Распределение числа авторов в публикациях',
-    '',
-    '```{r amounts-of-authors, echo=FALSE}',
-    'plot_ly(',
-    '  author_counts,',
-    '  x = ~n_authors,',
-    '  type = "histogram",',
-    '  marker = list(color = "#9467bd")',
-    ') %>%',
-    '  layout(',
-    '    xaxis = list(title = "Число авторов"),',
-    '    yaxis = list(title = "Число публикаций")',
-    '  )',
-    '```',
-    '',
-    '## Топ-5 ключевых слов по темам',
-    '',
-    '```{r top-words-by-tag, echo=FALSE}',
-    'if (nrow(topic_words) == 0) {',
-    '  plot_ly() %>% layout(title = "Недостаточно данных для визуализации")',
-    '} else {',
-    '  topic_words <- topic_words %>%',
-    '    arrange(tag, desc(n)) %>%',
-    '    mutate(word = tidytext::reorder_within(word, n, tag))',
-    '',
-    '  p <- ggplot(topic_words, aes(x = n, y = word, fill = tag)) +',
-    '    geom_col(show.legend = FALSE) +',
-    '    facet_wrap(~ tag, scales = "free_y", ncol = 4) +',
-    '    tidytext::scale_y_reordered() +',
-    '    labs(x = "Частота", y = "Ключевое слово") +',
-    '    theme_minimal()',
-    '',
-    '  ggplotly(p)',
-    '}',
-    '```'
+    "---",
+    "title: \"Анализ публикаций arXiv\"",
+    "format: html",
+    "execute:",
+    "  echo: false",
+    "  warning: false",
+    "  message: false",
+    "---",
+    "",
+    "```{r setup}",
+    "suppressPackageStartupMessages({",
+    "  library(dplyr)",
+    "  library(plotly)",
+    "  library(ggplot2)",
+    "  library(RColorBrewer)",
+    "  library(tidytext)",
+    "})",
+    "",
+    "ctx <- readRDS(\"dashboard-data.rds\")",
+    "has_data <- ctx$has_data",
+    "pubs_by_month <- ctx$pubs_by_month",
+    "top_authors <- ctx$top_authors",
+    "tag_counts <- ctx$tag_counts",
+    "pubs_by_weekday <- ctx$pubs_by_weekday",
+    "author_counts <- ctx$author_counts",
+    "top30 <- ctx$top_words",
+    "topic_words <- ctx$topic_words",
+    "```",
+    "",
+    "```{r data-note, echo=FALSE}",
+    "if (!has_data) {",
+    "  cat(\"<div class=\\\"alert alert-warning\\\">Нет локальных данных (load_publications() вернул 0 строк). Запусти ETL/обновление базы.</div>\")",
+    "}",
+    "```",
+    "",
+    "## Кол-во публикаций по дням",
+    "",
+    "```{r publ-by-day, echo=FALSE}",
+    "plot_ly(",
+    "  pubs_by_month,",
+    "  x = ~published_month,",
+    "  y = ~n,",
+    "  type = \"scatter\",",
+    "  mode = \"lines+markers\",",
+    "  line = list(color = \"#9467bd\", width = 2),",
+    "  marker = list(size = 6, color = \"#9467bd\")",
+    ") %>%",
+    "  layout(",
+    "    xaxis = list(title = \"Месяц\"),",
+    "    yaxis = list(title = \"Количество публикаций\")",
+    "  )",
+    "```",
+    "",
+    "## Авторы с наибольшим кол-вом публикаций",
+    "",
+    "```{r authors-populars, echo=FALSE}",
+    "plot_ly(",
+    "  top_authors,",
+    "  x = ~reorder(authors, n),",
+    "  y = ~n,",
+    "  type = \"bar\",",
+    "  marker = list(color = \"#2ca02c\")",
+    ") %>%",
+    "  layout(",
+    "    xaxis = list(tickangle = -45, title = \"\"),",
+    "    yaxis = list(title = \"Число публикаций\")",
+    "  )",
+    "```",
+    "",
+    "## Процентное соотношение публикаций с метками",
+    "",
+    "```{r tags-percentage, echo=FALSE}",
+    "plot_ly(",
+    "  tag_counts,",
+    "  labels = ~tag,",
+    "  values = ~n,",
+    "  type = \"pie\",",
+    "  textinfo = \"label+percent\",",
+    "  textposition = \"inside\",",
+    "  marker = list(colors = RColorBrewer::brewer.pal(12, \"Set3\"))",
+    ") %>%",
+    "  layout(",
+    "    title = list(text = \"Распределение публикаций по тематическим меткам\", x = 0.5),",
+    "    showlegend = TRUE",
+    "  )",
+    "```",
+    "",
+    "## Число публикаций по дням недели",
+    "",
+    "```{r publications-by-weekday, echo=FALSE}",
+    "plot_ly(",
+    "  pubs_by_weekday,",
+    "  x = ~published_weekday,",
+    "  y = ~n,",
+    "  type = \"bar\",",
+    "  marker = list(color = \"#9467bd\")",
+    ") %>%",
+    "  layout(",
+    "    xaxis = list(title = \"День недели\"),",
+    "    yaxis = list(title = \"Количество\")",
+    "  )",
+    "```",
+    "",
+    "## Самые частые слова в аннотациях",
+    "",
+    "```{r top-words-all, echo=FALSE}",
+    "plot_ly(",
+    "  top30,",
+    "  x = ~reorder(word, n),",
+    "  y = ~n,",
+    "  type = \"bar\",",
+    "  marker = list(color = \"#2ca02c\")",
+    ") %>%",
+    "  layout(",
+    "    xaxis = list(title = \"\", tickangle = -45),",
+    "    yaxis = list(title = \"Частота\")",
+    "  )",
+    "```",
+    "",
+    "## Распределение числа авторов в публикациях",
+    "",
+    "```{r amounts-of-authors, echo=FALSE}",
+    "plot_ly(",
+    "  author_counts,",
+    "  x = ~n_authors,",
+    "  type = \"histogram\",",
+    "  marker = list(color = \"#9467bd\")",
+    ") %>%",
+    "  layout(",
+    "    xaxis = list(title = \"Число авторов\"),",
+    "    yaxis = list(title = \"Число публикаций\")",
+    "  )",
+    "```",
+    "",
+    "## Топ-5 ключевых слов по темам",
+    "",
+    "```{r top-words-by-tag, echo=FALSE}",
+    "if (nrow(topic_words) == 0) {",
+    "  plot_ly() %>% layout(title = \"Недостаточно данных для визуализации\")",
+    "} else {",
+    "  topic_words <- topic_words %>%",
+    "    arrange(tag, desc(n)) %>%",
+    "    mutate(word = tidytext::reorder_within(word, n, tag))",
+    "",
+    "  p <- ggplot(topic_words, aes(x = n, y = word, fill = tag)) +",
+    "    geom_col(show.legend = FALSE) +",
+    "    facet_wrap(~ tag, scales = \"free_y\", ncol = 4) +",
+    "    tidytext::scale_y_reordered() +",
+    "    labs(x = \"Частота\", y = \"Ключевое слово\") +",
+    "    theme_minimal()",
+    "",
+    "  ggplotly(p)",
+    "}",
+    "```"
   )
 }

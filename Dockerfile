@@ -20,6 +20,7 @@ RUN --mount=type=cache,target=/var/cache/apt \
             libpng-dev \
             libjpeg-dev \
             libicu-dev \
+            nginx \
             python3 \
             wget \
             ca-certificates \
@@ -49,6 +50,15 @@ RUN R -e 'remotes::install_github("IT-life1/cyberarxiv", dependencies = TRUE, up
 
 # 7) Копируем docker-скрипты проекта внутрь образа
 COPY docker/ /srv/cyberarxiv/docker/
-RUN chmod +x /srv/cyberarxiv/docker/run_etl.R /srv/cyberarxiv/docker/run_dashboard.R /srv/cyberarxiv/docker/serve_dashboard.sh
+RUN chmod +x /srv/cyberarxiv/docker/run_etl.R \
+    /srv/cyberarxiv/docker/run_dashboard.R \
+    /srv/cyberarxiv/docker/serve_dashboard.sh \
+    /srv/cyberarxiv/docker/start.sh
 
-CMD ["Rscript", "/srv/cyberarxiv/docker/run_etl.R"]
+# 8) Настраиваем nginx для публикации статических файлов
+COPY docker/nginx.conf /etc/nginx/conf.d/cyberarxiv.conf
+RUN rm -f /etc/nginx/sites-enabled/default /etc/nginx/conf.d/default.conf
+
+EXPOSE 8000
+
+CMD ["/srv/cyberarxiv/docker/start.sh"]
