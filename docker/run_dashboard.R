@@ -2,13 +2,12 @@
 options(repos = 'https://cloud.r-project.org')
 log <- function(...) cat(sprintf("[%s] ", Sys.time()), ..., "\n")
 
-log("Rendering dashboard.Rmd to _site/dashboard.html")
-if (!requireNamespace('rmarkdown', quietly = TRUE)) {
-  install.packages('rmarkdown')
+site_dir <- '/var/www/html'
+dir.create(site_dir, showWarnings = FALSE, recursive = TRUE)
+
+if (!requireNamespace('cyberarxiv', quietly = TRUE)) {
+  stop('Package cyberarxiv is not installed; ensure the Docker image installed it.')
 }
 
-outdir <- '_site'
-dir.create(outdir, showWarnings = FALSE)
-
-rmarkdown::render(input = 'docker/dashboard.Rmd', output_file = file.path(outdir, 'dashboard.html'))
-log('Rendered to', file.path(outdir, 'dashboard.html'))
+log('Rendering and serving dashboard from', site_dir)
+cyberarxiv::serve_dashboard(output_dir = site_dir, quiet = TRUE)

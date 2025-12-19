@@ -4,12 +4,7 @@
 \alias{render_dashboard}
 \title{Render the cyberarxiv Quarto dashboard}
 \usage{
-render_dashboard(
-  source = NULL,
-  output_dir = "_site",
-  open_browser = interactive(),
-  ...
-)
+render_dashboard(source = NULL, output_dir = "_site", quiet = TRUE, ...)
 }
 \arguments{
 \item{source}{Path to a Quarto \code{.qmd} file. If NULL, uses embedded template.}
@@ -17,12 +12,9 @@ render_dashboard(
 \item{output_dir}{Directory where the rendered HTML (dashboard.html) will be written.
 Defaults to \verb{_site}.}
 
-\item{open_browser}{Logical; if TRUE (default when interactive) opens result in a browser.}
+\item{quiet}{Logical; passed through to \code{quarto::quarto_render()} for verbose output.}
 
 \item{...}{Additional arguments passed to \code{quarto::quarto_render()}.}
-}
-\value{
-Invisibly returns the path to the rendered HTML file.
 }
 \description{
 Рендерит Quarto-дашборд. Если source = NULL, используется встроенный шаблон
