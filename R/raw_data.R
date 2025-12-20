@@ -1,4 +1,8 @@
 #' Save arXiv publications to RDS
+#' 
+#' Сохраняет данные в файл. Определяет корень проекта по наличию DESCRIPTION
+#' и сохраняет в правильную директорию относительно корня проекта.
+#' 
 #' @param data A data.frame to save
 #' @param filename Name of the RDS file (default: "arxiv_papers.rds")
 #' @param dir Directory to save the file (default: "raw-data")
@@ -17,11 +21,28 @@ save_raw_data <- function(data, filename = "arxiv_papers.rds", dir = "raw-data")
     stop("'data' must be a data.frame")
   }
   
-  if (!dir.exists(dir)) {
-    dir.create(dir, recursive = TRUE)
+  # Определяем корень проекта (где находится DESCRIPTION)
+  find_project_root <- function() {
+    wd <- getwd()
+    # Поднимаемся вверх по директориям, пока не найдем DESCRIPTION
+    while (wd != "/" && !file.exists(file.path(wd, "DESCRIPTION"))) {
+      wd <- dirname(wd)
+    }
+    if (file.exists(file.path(wd, "DESCRIPTION"))) {
+      return(wd)
+    }
+    # Если не нашли, возвращаем текущую директорию
+    return(getwd())
   }
   
-  filepath <- file.path(dir, filename)
+  project_root <- find_project_root()
+  target_dir <- file.path(project_root, dir)
+  
+  if (!dir.exists(target_dir)) {
+    dir.create(target_dir, recursive = TRUE, showWarnings = FALSE)
+  }
+  
+  filepath <- file.path(target_dir, filename)
   
   saveRDS(data, file = filepath)
   

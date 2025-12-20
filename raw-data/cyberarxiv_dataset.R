@@ -1,9 +1,29 @@
+# Определяем корень проекта (где находится DESCRIPTION)
+find_project_root <- function() {
+  wd <- getwd()
+  # Поднимаемся вверх по директориям, пока не найдем DESCRIPTION
+  while (wd != "/" && !file.exists(file.path(wd, "DESCRIPTION"))) {
+    wd <- dirname(wd)
+  }
+  if (file.exists(file.path(wd, "DESCRIPTION"))) {
+    return(wd)
+  }
+  # Если не нашли, возвращаем текущую директорию
+  return(getwd())
+}
+
+project_root <- find_project_root()
+
+# Ищем исходный файл
 rds_path <- NULL
 
-if (file.exists(file.path("inst", "extdata", "arxiv_papers.rds"))) {
-  rds_path <- file.path("inst", "extdata", "arxiv_papers.rds")
-} else if (file.exists(file.path("raw-data", "arxiv_papers.rds"))) {
-  rds_path <- file.path("raw-data", "arxiv_papers.rds")
+inst_file <- file.path(project_root, "inst", "extdata", "arxiv_papers.rds")
+raw_data_file <- file.path(project_root, "raw-data", "arxiv_papers.rds")
+
+if (file.exists(inst_file)) {
+  rds_path <- inst_file
+} else if (file.exists(raw_data_file)) {
+  rds_path <- raw_data_file
 }
 
 if (!is.null(rds_path) && file.exists(rds_path)) {
@@ -23,12 +43,13 @@ if (!is.null(rds_path) && file.exists(rds_path)) {
   )
 }
 
-# Создаем директорию data/ если её нет (для встроенных датасетов пакета)
-if (!dir.exists("data")) {
-  dir.create("data", showWarnings = FALSE)
+# Создаем директорию data/ в корне проекта (для встроенных датасетов пакета)
+data_dir <- file.path(project_root, "data")
+if (!dir.exists(data_dir)) {
+  dir.create(data_dir, showWarnings = FALSE, recursive = TRUE)
 }
 
 # Сохраняем датасет в data/ для использования как встроенного датасета (как iris)
 # После пересборки пакета будет доступен как cyberarxiv_dataset без вызова функций
-save(cyberarxiv_dataset, file = file.path("data", "cyberarxiv_dataset.rda"), compress = "bzip2")
+save(cyberarxiv_dataset, file = file.path(data_dir, "cyberarxiv_dataset.rda"), compress = "bzip2")
 
