@@ -31,6 +31,7 @@ Imports:
     igraph,
     tidyr,
     ggplot2,
+    httpuv,
     RColorBrewer,
     quarto,
     testthat
