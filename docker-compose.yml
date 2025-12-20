@@ -4,10 +4,12 @@ services:
     container_name: cyberarxiv
     restart: unless-stopped
     environment:
-      - MAX_RESULTS=100
+      - MAX_RESULTS=1000
       - QUERY=
+      - CYBERARXIV_DB_PATH=/srv/cyberarxiv/data/cyberarxiv.duckdb
     ports:
       - "8000:8000"
     volumes:
       - ./data:/srv/cyberarxiv/data
+      - ./raw-data:/srv/cyberarxiv/raw-data
       - ./site:/var/www/html

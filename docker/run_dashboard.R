@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 options(repos = 'https://cloud.r-project.org')
-log <- function(...) cat(sprintf("[%s] ", Sys.time()), ..., "\n")
+log <- function(...) cat(sprintf("[%s] ", Sys.time()), ..., "\n", file = stderr())
 
 site_dir <- '/var/www/html'
 dir.create(site_dir, showWarnings = FALSE, recursive = TRUE)
