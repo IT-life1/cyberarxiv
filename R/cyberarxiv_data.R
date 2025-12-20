@@ -22,5 +22,5 @@
 #' # Load the dataset
 #' data(cyberarxiv_data)
 #' head(cyberarxiv_data)
-#' @export
+#'
 "cyberarxiv_data"
