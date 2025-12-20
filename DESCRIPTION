@@ -32,6 +32,10 @@ Imports:
     tidyr,
     ggplot2,
     RColorBrewer,
+    httpuv,
     quarto,
     testthat
 Config/testthat/edition: 3
+Depends: 
+    R (>= 3.5)
+LazyData: true
