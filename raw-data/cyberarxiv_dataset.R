@@ -23,9 +23,12 @@ if (!is.null(rds_path) && file.exists(rds_path)) {
   )
 }
 
-if (!dir.exists("raw-data")) {
-  dir.create("raw-data", showWarnings = FALSE)
+# Создаем директорию data/ если её нет (для встроенных датасетов пакета)
+if (!dir.exists("data")) {
+  dir.create("data", showWarnings = FALSE)
 }
 
-# Сохраняем датасет (стандартный способ для R пакетов)
-save(cyberarxiv_dataset, file = file.path("raw-data", "cyberarxiv_dataset.rda"), compress = "bzip2")
+# Сохраняем датасет в data/ для использования как встроенного датасета (как iris)
+# После пересборки пакета будет доступен как cyberarxiv_dataset без вызова функций
+save(cyberarxiv_dataset, file = file.path("data", "cyberarxiv_dataset.rda"), compress = "bzip2")
+
