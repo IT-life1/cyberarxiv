@@ -1,0 +1,332 @@
+/*-- scss:defaults --*/
+
+/* ── Colours ──────────────────────────────────────────────── */
+$dark-bg:    #0A0E1A;
+$mid-bg:     #0F1629;
+$panel:      #141E35;
+$border:     #1E3A5F;
+$accent:     #00D4FF;
+$accent2:    #7C3AED;
+$accent3:    #10B981;
+$accent4:    #F59E0B;
+$white:      #FFFFFF;
+$off-white:  #CBD5E1;
+$muted:      #64748B;
+
+/*-- scss:rules --*/
+
+/* ── Base overrides ───────────────────────────────────────── */
+.reveal {
+  font-family: 'Calibri', 'Segoe UI', sans-serif;
+  font-size: 22px;
+  color: $off-white;
+  background-color: $mid-bg;
+}
+
+.reveal .slides section {
+  text-align: left;
+}
+
+.reveal h1, .reveal h2, .reveal h3 {
+  font-family: 'Arial Black', 'Arial Bold', sans-serif;
+  color: $white;
+  text-transform: none;
+  letter-spacing: -0.02em;
+}
+
+.reveal h2 {
+  font-size: 1.6em;
+  color: $white;
+  border-bottom: 2px solid $accent;
+  padding-bottom: 0.2em;
+  margin-bottom: 0.6em;
+}
+
+.reveal h3 {
+  font-size: 1.1em;
+  color: $accent;
+}
+
+.reveal p {
+  color: $off-white;
+}
+
+.reveal a {
+  color: $accent;
+}
+
+/* ── Slide number / footer ────────────────────────────────── */
+.reveal .slide-number {
+  background-color: $panel;
+  color: $muted;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.reveal .footer {
+  color: $muted;
+  font-size: 0.65em;
+  letter-spacing: 0.1em;
+}
+
+/* ── Code blocks ──────────────────────────────────────────── */
+.reveal pre {
+  background: #061022;
+  border: 1px solid $accent;
+  border-left: 4px solid $accent;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  font-size: 0.72em;
+  margin: 0.5em 0;
+}
+
+.reveal code {
+  font-family: 'Consolas', 'Fira Code', monospace;
+  color: $accent3;
+  background: rgba(6,16,34,0.8);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}
+
+/* ── Pills (tech stack row) ───────────────────────────────── */
+.tech-pills {
+  margin-top: 1.5em;
+  display: flex;
+  gap: 0.5em;
+  flex-wrap: wrap;
+}
+
+.pill {
+  background: $panel;
+  border: 1px solid $accent;
+  color: $accent;
+  padding: 0.25em 0.8em;
+  border-radius: 999px;
+  font-size: 0.75em;
+  font-weight: bold;
+  letter-spacing: 0.08em;
+}
+
+/* ── Problem cards (slide 2) ──────────────────────────────── */
+.problem-card {
+  background: $panel;
+  border: 1px solid $border;
+  border-top: 3px solid $accent;
+  border-radius: 8px;
+  padding: 1.2em 1em;
+  text-align: center;
+  font-size: 0.85em;
+  height: 100%;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+.problem-card strong {
+  display: block;
+  color: $white;
+  font-size: 1.15em;
+  margin-bottom: 0.5em;
+}
+
+/* ── Solution note ────────────────────────────────────────── */
+.solution-note {
+  background: rgba(16,185,129,0.08);
+  border: 1px solid $accent3;
+  border-radius: 6px;
+  padding: 0.6em 1em;
+  margin-top: 0.8em;
+  font-size: 0.8em;
+  color: $accent3;
+}
+
+/* ── Pipeline flow (slide 3) ──────────────────────────────── */
+.pipeline-flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0.8em 0 1em;
+  gap: 0.3em;
+}
+
+.pipe-step {
+  background: $panel;
+  border-radius: 8px;
+  padding: 0.7em 0.5em;
+  text-align: center;
+  flex: 1;
+  font-size: 0.78em;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  border-top: 3px solid $accent;
+}
+
+.pipe-step strong {
+  display: block;
+  font-size: 1.6em;
+  line-height: 1;
+  margin-bottom: 0.2em;
+}
+
+.pipe-step em {
+  font-size: 0.8em;
+  color: $muted;
+  font-style: normal;
+}
+
+.step-blue  { border-top-color: #0EA5E9; }
+.step-purple{ border-top-color: #7C3AED; }
+.step-green { border-top-color: #10B981; }
+.step-amber { border-top-color: #F59E0B; }
+.step-red   { border-top-color: #F87171; }
+
+.pipe-arrow {
+  color: $accent;
+  font-size: 1.4em;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+/* ── Package box ──────────────────────────────────────────── */
+.package-box {
+  background: rgba(0,212,255,0.06);
+  border: 1px solid $accent;
+  border-radius: 6px;
+  padding: 0.55em 1em;
+  margin: 0.6em 0;
+  font-size: 0.85em;
+  color: $accent;
+  text-align: center;
+}
+
+/* ── Info card (slide 4) ──────────────────────────────────── */
+.info-card {
+  background: $panel;
+  border: 1px solid $border;
+  border-top: 3px solid $accent;
+  border-radius: 8px;
+  padding: 1em 1.2em;
+  font-size: 0.82em;
+  height: 100%;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+.info-card h3 {
+  margin-top: 0;
+  color: $accent;
+}
+
+/* ── Category cards (slide 5) ────────────────────────────── */
+.cat-card {
+  background: $panel;
+  border-left: 4px solid $accent;
+  border-radius: 6px;
+  padding: 0.65em 0.9em;
+  margin-bottom: 0.5em;
+  font-size: 0.82em;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.cat-card strong { color: $white; display: block; margin-bottom: 0.2em; }
+
+.cat-red    { border-left-color: #EF4444; }
+.cat-purple { border-left-color: #8B5CF6; }
+.cat-cyan   { border-left-color: #06B6D4; }
+.cat-green  { border-left-color: #10B981; }
+.cat-amber  { border-left-color: #F59E0B; }
+.cat-orange { border-left-color: #F97316; }
+
+/* ── Storage cards (slide 6) ──────────────────────────────── */
+.storage-card {
+  background: $panel;
+  border: 1.5px solid $border;
+  border-radius: 8px;
+  padding: 1em 1.2em;
+  font-size: 0.82em;
+  margin-bottom: 0.8em;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+.storage-card h3 { margin-top: 0; }
+.storage-amber { border-color: #F59E0B; }
+.storage-amber h3 { color: #F59E0B; }
+.storage-green { border-color: #10B981; }
+.storage-green h3 { color: #10B981; }
+
+/* ── Stat cards (slide 7) ─────────────────────────────────── */
+.stat-card {
+  background: $panel;
+  border-radius: 8px;
+  padding: 0.8em 0.5em;
+  text-align: center;
+  border-top: 3px solid $accent;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  margin-bottom: 0.8em;
+}
+
+.stat-card h3 {
+  font-size: 2em;
+  margin: 0;
+  color: $accent;
+}
+
+.stat-blue   { border-top-color: #0EA5E9; }
+.stat-blue h3 { color: #0EA5E9; }
+.stat-purple { border-top-color: #7C3AED; }
+.stat-purple h3 { color: #7C3AED; }
+.stat-green  { border-top-color: #10B981; }
+.stat-green h3 { color: #10B981; }
+
+/* ── Dashboard block ──────────────────────────────────────── */
+.dash-block {
+  background: $panel;
+  border: 1px solid $border;
+  border-radius: 8px;
+  padding: 0.8em 1em;
+  font-size: 0.82em;
+  line-height: 1.8;
+}
+
+/* ── Tech cards (slide 9) ─────────────────────────────────── */
+.tech-card {
+  background: $panel;
+  border-top: 3px solid $accent;
+  border-radius: 8px;
+  padding: 0.75em 0.9em;
+  margin-bottom: 0.5em;
+  font-size: 0.8em;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.tc-blue   { border-top-color: #2563EB; }
+.tc-red    { border-top-color: #DC2626; }
+.tc-amber  { border-top-color: #F59E0B; }
+.tc-purple { border-top-color: #9333EA; }
+.tc-cyan   { border-top-color: #0EA5E9; }
+.tc-green  { border-top-color: #10B981; }
+
+/* ── Done list (slide 10) ─────────────────────────────────── */
+.done-list {
+  font-size: 1em;
+  line-height: 2;
+  color: $white;
+}
+
+.done-list strong {
+  color: $accent;
+}
+
+/* ── CTA box ──────────────────────────────────────────────── */
+.cta-box {
+  background: $panel;
+  border: 1px solid $accent3;
+  border-radius: 6px;
+  padding: 0.6em 1em;
+  margin-top: 1em;
+}
+
+.cta-box pre, .cta-box code {
+  background: transparent;
+  border: none;
+  color: $accent3;
+  font-size: 0.9em;
+  margin: 0;
+  padding: 0;
+}
