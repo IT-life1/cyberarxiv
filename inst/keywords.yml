@@ -1,0 +1,456 @@
+# CyberArXiv keyword classifier configuration
+#
+# Format per class:
+#   ClassName:
+#     keywords:
+#       - keyword one
+#       - keyword two
+#     weights:            # optional — overrides default nchar(keyword)*0.1
+#       keyword one: 3.0
+#
+# Minimal form (no custom weights):
+#   ClassName:
+#     keywords:
+#       - keyword one
+#       - keyword two
+#
+# To add a new class: append a new block and reload with
+#   classify_data(data, keywords_file = "inst/keywords.yml")
+# No package rebuild needed.
+
+Threat Actor:
+  keywords:
+    - threat actor
+    - attacker
+    - adversary
+    - hacker
+    - insider
+    - malicious actor
+    - cybercriminal
+    - nation state
+    - apt
+    - script kiddie
+    - fraudster
+    - phisher
+    - threat agent
+    - perpetrator
+    - black hat
+    - red team
+    - blue team
+    - criminal group
+    - hacktivist
+    - organized crime
+    - state sponsored
+    - internal attacker
+    - external attacker
+    - rogue employee
+
+Cryptography:
+  keywords:
+    - cryptography
+    - encryption
+    - decryption
+    - cipher
+    - cryptosystem
+    - cryptanalysis
+    - symmetric encryption
+    - asymmetric encryption
+    - public key
+    - private key
+    - hash function
+    - digital signature
+    - key management
+    - key exchange
+    - aes
+    - rsa
+    - ecc
+    - tls
+    - ssl
+    - cryptographic protocol
+    - key derivation
+    - salt
+    - hashing
+    - message authentication
+
+Vulnerability:
+  keywords:
+    - vulnerability
+    - software vulnerability
+    - security flaw
+    - weakness
+    - bug
+    - cve
+    - zero day
+    - misconfiguration
+    - exposure
+    - unpatched
+    - outdated software
+    - insecure configuration
+    - cvss
+    - attack surface
+    - known vulnerability
+    - unknown vulnerability
+    - logic flaw
+    - input validation
+    - buffer overflow
+    - integer overflow
+    - race condition
+    - use after free
+    - memory corruption
+    - security defect
+
+Exploit:
+  keywords:
+    - exploit
+    - exploitation
+    - exploit code
+    - payload
+    - shellcode
+    - weaponized exploit
+    - exploit kit
+    - remote code execution
+    - rce
+    - privilege escalation
+    - local privilege escalation
+    - take advantage
+    - proof of concept
+    - poc
+    - arbitrary code execution
+    - sandbox escape
+    - command injection
+    - sql injection exploit
+    - xss exploit
+    - heap spray
+    - return oriented programming
+    - rop chain
+    - exploit chain
+    - attack payload
+
+Attack Vector:
+  keywords:
+    - attack vector
+    - initial access
+    - entry point
+    - attack path
+    - delivery method
+    - infection vector
+    - phishing email
+    - malicious attachment
+    - drive by download
+    - watering hole
+    - supply chain attack
+    - remote access
+    - open port
+    - exposed service
+    - credential abuse
+    - password reuse
+    - brute force
+    - vpn compromise
+    - rdp attack
+    - email attack
+    - web attack
+    - usb attack
+    - network based attack
+    - lateral movement
+
+Privacy Protection:
+  keywords:
+    - privacy
+    - data privacy
+    - privacy preserving
+    - privacy protection
+    - personal data
+    - data anonymization
+    - anonymization
+    - pseudonymization
+    - data masking
+    - k anonymity
+    - l diversity
+    - t closeness
+    - differential privacy
+    - privacy budget
+    - private data
+    - sensitive data
+    - data leakage
+    - privacy leakage
+    - confidentiality
+    - data protection
+    - gdpr
+    - privacy regulation
+    - privacy risk
+    - privacy attack
+
+Learning Theory:
+  keywords:
+    - learning theory
+    - statistical learning
+    - generalization
+    - generalization bound
+    - sample complexity
+    - vc dimension
+    - pac learning
+    - probably approximately correct
+    - theoretical guarantee
+    - convergence
+    - convergence rate
+    - optimization theory
+    - risk minimization
+    - empirical risk
+    - structural risk minimization
+    - bias variance tradeoff
+    - theoretical analysis
+    - asymptotic behavior
+    - proof
+    - theorem
+    - lemma
+    - proposition
+    - formal analysis
+    - theoretical framework
+
+Model Architecture:
+  keywords:
+    - model architecture
+    - neural architecture
+    - convolutional neural network
+    - cnn
+    - recurrent neural network
+    - rnn
+    - long short term memory
+    - lstm
+    - gated recurrent unit
+    - gru
+    - transformer
+    - attention mechanism
+    - self attention
+    - encoder decoder
+    - graph neural network
+    - gnn
+    - autoencoder
+    - variational autoencoder
+    - vae
+    - residual network
+    - resnet
+    - deep architecture
+    - layer design
+    - model depth
+
+ML Methodology:
+  keywords:
+    - machine learning
+    - supervised learning
+    - unsupervised learning
+    - semi supervised learning
+    - reinforcement learning
+    - deep learning
+    - neural network
+    - training process
+    - model training
+    - model optimization
+    - loss function
+    - objective function
+    - gradient descent
+    - stochastic gradient descent
+    - backpropagation
+    - regularization
+    - overfitting
+    - underfitting
+    - hyperparameter tuning
+    - cross validation
+    - feature extraction
+    - feature selection
+    - representation learning
+    - learning algorithm
+
+Evaluation & Benchmarking:
+  keywords:
+    - evaluation
+    - benchmark
+    - experimental evaluation
+    - performance evaluation
+    - benchmark dataset
+    - comparison
+    - baseline
+    - state of the art
+    - sota
+    - experimental results
+    - accuracy
+    - precision
+    - recall
+    - f1 score
+    - auc
+    - roc curve
+    - confusion matrix
+    - evaluation metric
+    - performance metric
+    - scalability
+    - efficiency
+    - runtime
+    - computational cost
+    - memory consumption
+
+Malware:
+  keywords:
+    - malware
+    - ransomware
+    - trojan
+    - worm
+    - spyware
+    - rootkit
+    - backdoor
+    - botnet
+    - adware
+    - fileless malware
+    - loader
+    - dropper
+    - command and control
+    - c2 server
+    - malicious binary
+    - malicious script
+    - crimeware
+    - banking trojan
+    - keylogger
+    - stealer
+    - cryptominer
+    - malicious dll
+    - payload delivery
+    - persistent malware
+  weights:
+    ransomware: 3.0
+    botnet: 2.0
+    rootkit: 2.0
+
+Log Event:
+  keywords:
+    - log
+    - event
+    - event log
+    - audit log
+    - security log
+    - syslog
+    - telemetry
+    - log entry
+    - log file
+    - audit trail
+    - log analysis
+    - event correlation
+    - siem
+    - alert
+    - alerting
+    - detection event
+    - security event
+    - anomaly event
+    - monitoring data
+    - log collection
+    - log aggregation
+    - event monitoring
+    - log retention
+    - forensic log
+
+Incident:
+  keywords:
+    - incident
+    - security incident
+    - cyber incident
+    - breach
+    - data breach
+    - intrusion
+    - compromise
+    - security breach
+    - attack incident
+    - incident response
+    - incident handling
+    - incident management
+    - containment
+    - eradication
+    - recovery
+    - post incident analysis
+    - lessons learned
+    - forensic investigation
+    - root cause analysis
+    - incident timeline
+    - response playbook
+    - security escalation
+    - incident report
+    - major incident
+
+Social Engineering:
+  keywords:
+    - social engineering
+    - phishing
+    - spear phishing
+    - whaling
+    - vishing
+    - smishing
+    - pretexting
+    - baiting
+    - impersonation
+    - credential harvesting
+    - password phishing
+    - business email compromise
+    - bec
+    - ceo fraud
+    - human factor
+    - psychological manipulation
+    - trust exploitation
+    - authority exploitation
+    - urgency tactic
+    - fear tactic
+    - social proof
+    - email deception
+    - voice phishing
+    - sms phishing
+    - fake login page
+
+Network Attack:
+  keywords:
+    - network attack
+    - ddos
+    - dos attack
+    - packet sniffing
+    - man in the middle
+    - mitm attack
+    - port scanning
+    - network reconnaissance
+    - arp spoofing
+    - dns poisoning
+    - ip spoofing
+    - session hijacking
+    - tcp reset
+    - udp flood
+    - icmp flood
+    - network intrusion
+    - lateral movement
+    - network pivoting
+    - vlan hopping
+    - mac flooding
+    - rogue access point
+    - wifi attack
+    - wireless attack
+    - network exploitation
+
+ML/AI Security:
+  keywords:
+    - machine learning security
+    - ai security
+    - adversarial attack
+    - data poisoning
+    - model stealing
+    - membership inference
+    - model inversion
+    - backdoor attack
+    - evasion attack
+    - adversarial example
+    - adversarial training
+    - differential privacy
+    - federated learning
+    - robust machine learning
+    - model watermarking
+    - secure aggregation
+    - trustworthy ai
+    - responsible ai
+    - ai safety
+    - algorithmic bias
+    - explainable ai
+    - model vulnerability
+    - ml threat detection
+    - ai based detection
