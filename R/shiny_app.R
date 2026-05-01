@@ -1256,3 +1256,445 @@ launch_app <- function(host = "0.0.0.0",
     })
 
     # ---- Аналитика ----
+    output$plot_authors <- plotly::renderPlotly({
+      df <- publications()
+      if (is.null(df) || nrow(df) == 0 || !"authors" %in% names(df))
+        return(plotly::plot_ly() |> plotly::layout(title = "Нет данных"))
+      auth <- df |>
+        dplyr::filter(!is.na(authors)) |>
+        dplyr::mutate(authors = stringr::str_split(authors, ",\\s*")) |>
+        tidyr::unnest(authors) |>
+        dplyr::mutate(authors = stringr::str_trim(authors)) |>
+        dplyr::filter(nzchar(authors)) |>
+        dplyr::count(authors, sort = TRUE) |>
+        utils::head(15)
+      plotly::plot_ly(auth, x = ~reorder(authors, n), y = ~n, type = "bar",
+                      marker = list(color = "#2ca02c")) |>
+        plotly::layout(xaxis = list(tickangle = -45, title = ""),
+                       yaxis = list(title = "Публикаций"))
+    })
+    output$plot_words <- plotly::renderPlotly({
+      df <- publications()
+      if (is.null(df) || nrow(df) == 0)
+        return(plotly::plot_ly() |> plotly::layout(title = "Нет данных"))
+      words <- tryCatch(get_top_words(df, n = 25), error = function(e) NULL)
+      if (is.null(words) || nrow(words) == 0)
+        return(plotly::plot_ly() |> plotly::layout(title = "Недостаточно данных"))
+      plotly::plot_ly(words, x = ~reorder(word, n), y = ~n, type = "bar",
+                      marker = list(color = "#9467bd")) |>
+        plotly::layout(xaxis = list(tickangle = -45, title = ""),
+                       yaxis = list(title = "Частота"))
+    })
+    output$cross_tab <- DT::renderDT({
+      df      <- publications()
+      task_id <- trimws(input$analytics_ml_task %||% "")
+      tag_col <- paste0("ml_tag_", task_id)
+      if (is.null(df) || nrow(df) == 0 || !"tag" %in% names(df)) return(NULL)
+      if (!nzchar(task_id) || !tag_col %in% names(df)) return(NULL)
+      ml_vals <- df[[tag_col]]
+      sub <- df[!is.na(df$tag) & !is.na(ml_vals) & nzchar(ml_vals), , drop = FALSE]
+      if (nrow(sub) == 0) return(NULL)
+      tab <- as.data.frame.matrix(table(sub$tag, sub[[tag_col]]))
+      tab$keyword_tag <- rownames(tab)
+      tab <- tab[, c("keyword_tag", setdiff(names(tab), "keyword_tag"))]
+      DT::datatable(tab, rownames = FALSE,
+                    options = list(pageLength = 20, scrollX = TRUE))
+    })
+
+    output$plot_sources_analytics <- plotly::renderPlotly({
+      df <- publications()
+      if (is.null(df) || nrow(df) == 0 || !"source" %in% names(df))
+        return(plotly::plot_ly() |> plotly::layout(title = "Нет данных"))
+      cnts <- dplyr::count(df, source, sort = TRUE)
+      plotly::plot_ly(cnts, x = ~reorder(source, n), y = ~n, type = "bar",
+                      marker = list(color = "#2c5282")) |>
+        plotly::layout(xaxis = list(title = ""),
+                       yaxis = list(title = "Статей"),
+                       margin = list(b = 70))
+    })
+
+    output$plot_by_year <- plotly::renderPlotly({
+      df <- publications()
+      if (is.null(df) || nrow(df) == 0 || !"published_date" %in% names(df))
+        return(plotly::plot_ly() |> plotly::layout(title = "Нет данных"))
+      df2 <- df |>
+        dplyr::mutate(year = format(as.POSIXct(published_date), "%Y")) |>
+        dplyr::filter(!is.na(year), nzchar(year)) |>
+        dplyr::count(year) |>
+        dplyr::arrange(year)
+      if (nrow(df2) == 0) return(plotly::plot_ly() |> plotly::layout(title = "Нет данных"))
+      plotly::plot_ly(df2, x = ~year, y = ~n, type = "bar",
+                      marker = list(color = "#1d4ed8")) |>
+        plotly::layout(xaxis = list(title = "Год"),
+                       yaxis = list(title = "Статей"))
+    })
+
+    output$plot_conf_by_tag <- plotly::renderPlotly({
+      df       <- publications()
+      task_id  <- trimws(input$analytics_ml_task %||% "")
+      conf_col <- paste0("ml_confidence_", task_id)
+      if (is.null(df) || nrow(df) == 0 || !nzchar(task_id) ||
+          !"tag" %in% names(df) || !conf_col %in% names(df))
+        return(plotly::plot_ly() |> plotly::layout(title = "Нет ML-данных"))
+      avg <- df |>
+        dplyr::filter(!is.na(tag), !is.na(.data[[conf_col]])) |>
+        dplyr::group_by(tag) |>
+        dplyr::summarise(avg_conf = mean(.data[[conf_col]], na.rm = TRUE),
+                         n = dplyr::n(), .groups = "drop") |>
+        dplyr::arrange(dplyr::desc(avg_conf)) |>
+        head(15)
+      if (nrow(avg) == 0) return(plotly::plot_ly() |> plotly::layout(title = "Нет данных"))
+      plotly::plot_ly(avg, x = ~reorder(tag, avg_conf), y = ~avg_conf, type = "bar",
+                      marker = list(
+                        color = ~avg_conf,
+                        colorscale = list(c(0, "#fca5a5"), c(0.5, "#fbbf24"), c(1, "#15803d")),
+                        showscale = FALSE
+                      )) |>
+        plotly::layout(xaxis = list(tickangle = -45, title = ""),
+                       yaxis = list(title = "Ср. confidence", range = c(0, 1)))
+    })
+
+    output$plot_ml_coverage <- plotly::renderPlotly({
+      df      <- publications()
+      task_id <- trimws(input$analytics_ml_task %||% "")
+      tag_col <- paste0("ml_tag_", task_id)
+      if (is.null(df) || nrow(df) == 0)
+        return(plotly::plot_ly() |> plotly::layout(title = "Нет данных"))
+      has_kw <- !is.na(df$tag) & nzchar(df$tag)
+      has_ml <- if (nzchar(task_id) && tag_col %in% names(df))
+        !is.na(df[[tag_col]]) & nzchar(df[[tag_col]])
+      else rep(FALSE, nrow(df))
+      cov <- data.frame(
+        group = c("Keyword + ML", "Только keyword", "Без тегов"),
+        n     = c(sum(has_kw & has_ml), sum(has_kw & !has_ml), sum(!has_kw)),
+        color = c("#15803d", "#2c5282", "#9ca3af"),
+        stringsAsFactors = FALSE
+      )
+      cov <- cov[cov$n > 0, ]
+      plotly::plot_ly(cov, x = ~group, y = ~n, type = "bar",
+                      marker = list(color = ~color)) |>
+        plotly::layout(xaxis = list(title = ""),
+                       yaxis = list(title = "Статей"),
+                       showlegend = FALSE)
+    })
+
+    # Обновить список доступных задач в аналитике при перезагрузке данных
+    shiny::observe({
+      df <- publications()
+      if (is.null(df) || nrow(df) == 0) return()
+      task_ids <- sub("^ml_tag_", "", grep("^ml_tag_", names(df), value = TRUE))
+      if (length(task_ids) == 0) {
+        shiny::updateSelectInput(session, "analytics_ml_task",
+                                 choices = c("(нет ML-данных)" = ""), selected = "")
+      } else {
+        tasks   <- tryCatch(load_ml_tasks(), error = function(e) list())
+        choices <- setNames(task_ids, vapply(task_ids, function(tid) {
+          tasks[[tid]]$label %||% tid
+        }, character(1)))
+        cur <- isolate(input$analytics_ml_task)
+        sel <- if (!is.null(cur) && nzchar(cur) && cur %in% task_ids) cur else task_ids[1]
+        shiny::updateSelectInput(session, "analytics_ml_task",
+                                 choices = choices, selected = sel)
+      }
+    })
+
+    output$plot_ml_conf <- plotly::renderPlotly({
+      df      <- publications()
+      task_id <- trimws(input$analytics_ml_task %||% "")
+      conf_col <- paste0("ml_confidence_", task_id)
+      if (is.null(df) || nrow(df) == 0 || !nzchar(task_id) || !conf_col %in% names(df))
+        return(plotly::plot_ly() |> plotly::layout(title = "Нет данных"))
+      conf <- as.numeric(df[[conf_col]])
+      conf <- conf[!is.na(conf)]
+      if (length(conf) == 0)
+        return(plotly::plot_ly() |> plotly::layout(title = "Нет ML-данных для этой задачи"))
+      plotly::plot_ly(x = conf, type = "histogram", nbinsx = 20,
+                      marker = list(color = "#ff7f0e",
+                                    line = list(color = "white", width = 0.5))) |>
+        plotly::layout(xaxis = list(title = "Уверенность"),
+                       yaxis = list(title = "Кол-во статей"))
+    })
+
+    output$plot_tag_comparison <- plotly::renderPlotly({
+      df      <- publications()
+      task_id <- trimws(input$analytics_ml_task %||% "")
+      tag_col <- paste0("ml_tag_", task_id)
+      if (is.null(df) || nrow(df) == 0 || !"tag" %in% names(df))
+        return(plotly::plot_ly() |> plotly::layout(title = "Нет данных"))
+      kw <- df |>
+        dplyr::filter(!is.na(tag)) |>
+        dplyr::count(tag, sort = TRUE) |>
+        head(15) |>
+        dplyr::rename(category = tag) |>
+        dplyr::mutate(type = "Keyword")
+      has_ml <- nzchar(task_id) && tag_col %in% names(df) &&
+                any(!is.na(df[[tag_col]]) & nzchar(df[[tag_col]]))
+      if (has_ml) {
+        ml_vals <- df[[tag_col]]
+        ml <- df[!is.na(ml_vals) & nzchar(ml_vals), ] |>
+          dplyr::count(.data[[tag_col]], sort = TRUE) |>
+          head(15) |>
+          dplyr::rename(category = dplyr::all_of(tag_col)) |>
+          dplyr::mutate(type = paste0("ML (", task_id, ")"))
+        combined <- rbind(kw, ml)
+      } else {
+        combined <- kw
+      }
+      plotly::plot_ly(combined, x = ~category, y = ~n, color = ~type, type = "bar") |>
+        plotly::layout(barmode = "group",
+                       xaxis = list(tickangle = -40, title = ""),
+                       yaxis = list(title = "Статей"),
+                       margin = list(b = 110),
+                       legend = list(orientation = "h", x = 0, y = -0.4))
+    })
+
+    # ============================================================
+    # ---- Обучение модели (training pipeline) ----
+    # ============================================================
+    #
+    # State for the Training tab. We poll active jobs every 2 seconds via
+    # invalidateLater so progress/log update without manual refresh. Only
+    # one job per type can be tracked at a time (collect/label/train) —
+    # the user can still spawn extras through R but the UI surfaces the
+    # most recent.
+
+    tr_active_collect <- shiny::reactiveVal(NULL)
+    tr_active_label   <- shiny::reactiveVal(NULL)
+    tr_active_train   <- shiny::reactiveVal(NULL)
+    tr_active_excel   <- shiny::reactiveVal(NULL)
+    tr_classes_state  <- shiny::reactiveVal(NULL)
+
+    .tr_safe <- function(expr, fail = NULL) tryCatch(expr, error = function(e) fail)
+
+    .tr_format_bytes <- function(b) {
+      if (is.null(b) || is.na(b)) return("—")
+      units <- c("B","KB","MB","GB","TB")
+      i <- 1
+      while (b >= 1024 && i < length(units)) { b <- b / 1024; i <- i + 1 }
+      sprintf("%.1f %s", b, units[i])
+    }
+
+    .tr_render_progress <- function(job) {
+      if (is.null(job)) return(NULL)
+      pct  <- as.integer(round((job$progress %||% 0) * 100))
+      stat <- job$status %||% "—"
+      bar_color <- switch(stat,
+        completed = "#2e7d32", failed = "#c62828",
+        cancelled = "#757575", running = "#1565c0", "#888"
+      )
+      shiny::div(
+        style = "background:#eee; border-radius:4px; overflow:hidden; height:18px; margin-top:6px;",
+        shiny::div(style = paste0(
+          "width:", pct, "%; height:100%; background:", bar_color, "; ",
+          "transition:width .3s; color:white; font-size:11px; ",
+          "text-align:center; line-height:18px;"),
+          paste0(stat, " · ", pct, "%"))
+      )
+    }
+
+    # Initial config load (defer to first time user opens the tab — it
+    # touches the network)
+    tr_load_config <- function() {
+      res <- .tr_safe(training_get_config_safe(ml_service_url),
+                      list(ok = FALSE, error = "internal R error", data = NULL))
+      if (!isTRUE(res$ok)) {
+        msg <- paste0("Не удалось загрузить training-конфиг: ", res$error %||% "unknown")
+        output$tr_classes_status <- shiny::renderText(msg)
+        output$tr_prompts_status <- shiny::renderText(msg)
+        output$tr_llm_status     <- shiny::renderText(msg)
+        return()
+      }
+      cfg <- res$data
+      tr_classes_state(cfg$classes)
+
+      shiny::updateTextAreaInput(session, "tr_system_prompt",
+                                 value = cfg$system_prompt %||% "")
+      shiny::updateTextAreaInput(session, "tr_user_template",
+                                 value = cfg$user_prompt_template %||% "")
+      llm <- cfg$llm %||% list()
+      shiny::updateSelectInput(session, "tr_llm_provider",
+                               selected = llm$provider %||% "openai")
+      shiny::updateTextInput(session, "tr_llm_model",
+                             value = llm$model %||% "gpt-4o-mini")
+      shiny::updateTextInput(session, "tr_llm_base_url",
+                             value = llm$base_url %||% "")
+      shiny::updateNumericInput(session, "tr_llm_temp",
+                                value = llm$temperature %||% 0)
+      shiny::updateNumericInput(session, "tr_llm_max_tokens",
+                                value = llm$max_tokens %||% 32)
+      shiny::updateNumericInput(session, "tr_llm_concurrency",
+                                value = llm$concurrency %||% 4)
+      shiny::updateNumericInput(session, "tr_llm_timeout",
+                                value = llm$request_timeout_secs %||% 60)
+      key_set <- isTRUE(llm$api_key_set)
+      stat <- if (key_set) paste0("✓ key stored (", llm$api_key %||% "***", ")")
+              else "ключ не задан"
+      output$tr_llm_status <- shiny::renderText(stat)
+    }
+    shiny::isolate(tr_load_config())
+
+    # ---------- Конфигурация: классы (rhandsontable) ----------
+    output$tr_classes_table <- rhandsontable::renderRHandsontable({
+      classes <- tr_classes_state()
+      if (is.null(classes) || length(classes) == 0) {
+        df <- data.frame(name = character(), description = character(),
+                         stringsAsFactors = FALSE)
+      } else {
+        df <- do.call(rbind, lapply(classes, function(c) {
+          data.frame(name = c$name %||% "",
+                     description = c$description %||% "",
+                     stringsAsFactors = FALSE)
+        }))
+      }
+      rhandsontable::rhandsontable(df, rowHeaders = NULL, height = 320, useTypes = TRUE) |>
+        rhandsontable::hot_col("name", width = 180) |>
+        rhandsontable::hot_col("description", width = 380)
+    })
+
+    shiny::observeEvent(input$btn_tr_class_add, {
+      classes <- tr_classes_state() %||% list()
+      tbl <- .tr_safe(rhandsontable::hot_to_r(input$tr_classes_table), NULL)
+      if (!is.null(tbl) && nrow(tbl) > 0) {
+        classes <- lapply(seq_len(nrow(tbl)), function(i)
+          list(name = tbl$name[i] %||% "", description = tbl$description[i] %||% ""))
+      }
+      classes[[length(classes) + 1]] <- list(name = "new_class", description = "")
+      tr_classes_state(classes)
+    })
+
+    shiny::observeEvent(input$btn_tr_class_save, {
+      tbl <- .tr_safe(rhandsontable::hot_to_r(input$tr_classes_table), NULL)
+      if (is.null(tbl) || nrow(tbl) == 0) {
+        output$tr_classes_status <- shiny::renderText("Таблица пуста.")
+        return()
+      }
+      classes <- lapply(seq_len(nrow(tbl)), function(i) {
+        list(name = trimws(tbl$name[i]),
+             description = trimws(tbl$description[i] %||% ""))
+      })
+      classes <- Filter(function(c) nzchar(c$name), classes)
+      res <- .tr_safe(training_set_config_safe(classes = classes,
+                                               ml_service_url = ml_service_url),
+                      list(ok = FALSE, error = "internal R error"))
+      if (isTRUE(res$ok) && !is.null(res$data$classes)) {
+        tr_classes_state(res$data$classes)
+        output$tr_classes_status <- shiny::renderText(
+          paste0("✓ Сохранено: ", length(res$data$classes), " классов."))
+      } else {
+        output$tr_classes_status <- shiny::renderText(
+          paste0("Ошибка: ", res$error %||% "unknown"))
+      }
+    })
+
+    shiny::observeEvent(input$btn_tr_prompts_save, {
+      res <- .tr_safe(training_set_config_safe(
+        system_prompt = input$tr_system_prompt,
+        user_prompt_template = input$tr_user_template,
+        ml_service_url = ml_service_url
+      ), list(ok = FALSE, error = "internal R error"))
+      if (isTRUE(res$ok)) {
+        output$tr_prompts_status <- shiny::renderText("✓ Промпты сохранены.")
+      } else {
+        output$tr_prompts_status <- shiny::renderText(
+          paste0("Ошибка: ", res$error %||% "unknown"))
+      }
+    })
+
+    shiny::observeEvent(input$btn_tr_health, {
+      url <- ml_service_url
+      txt <- tryCatch({
+        req <- httr2::request(url) |>
+          httr2::req_url_path("training/health") |>
+          httr2::req_timeout(15) |>
+          httr2::req_error(is_error = function(r) FALSE)
+        resp <- httr2::req_perform(req)
+        status <- httr2::resp_status(resp)
+        body <- httr2::resp_body_string(resp)
+        if (status >= 400) {
+          paste0("HTTP ", status, ":\n", substr(body, 1, 1000))
+        } else {
+          j <- jsonlite::fromJSON(body, simplifyVector = TRUE)
+          err_text <- if (length(j$errors %||% list()) > 0)
+            paste("\nERRORS:", paste(unlist(j$errors), collapse = "; "))
+          else ""
+          sdks <- j$sdks %||% list()
+          paste0("status: ", if (isTRUE(j$ok)) "✓ OK" else "✗ FAIL", "\n",
+                 "training_data_dir: ", j$training_data_dir %||% "—", "\n",
+                 "config_path: ", j$config_path %||% "—", "\n",
+                 "config_writable: ", isTRUE(j$config_writable), "\n",
+                 "sdks: openai=", isTRUE(sdks$openai),
+                 ", anthropic=", isTRUE(sdks$anthropic),
+                 err_text)
+        }
+      }, error = function(e) paste("transport error:", conditionMessage(e)))
+      output$tr_health_info <- shiny::renderText(txt)
+    })
+
+    shiny::observeEvent(input$btn_tr_llm_save, {
+      llm <- list(
+        provider = input$tr_llm_provider,
+        model = input$tr_llm_model,
+        base_url = input$tr_llm_base_url,
+        temperature = input$tr_llm_temp,
+        max_tokens = as.integer(input$tr_llm_max_tokens),
+        concurrency = as.integer(input$tr_llm_concurrency),
+        request_timeout_secs = as.integer(input$tr_llm_timeout)
+      )
+      key <- trimws(input$tr_llm_api_key %||% "")
+      if (nzchar(key)) llm$api_key <- key
+      res <- .tr_safe(training_set_config_safe(llm = llm,
+                                               ml_service_url = ml_service_url),
+                      list(ok = FALSE, error = "internal R error"))
+      if (isTRUE(res$ok)) {
+        shiny::updateTextInput(session, "tr_llm_api_key", value = "")
+        tr_load_config()
+        output$tr_llm_status <- shiny::renderText("✓ LLM-настройки сохранены.")
+      } else {
+        output$tr_llm_status <- shiny::renderText(
+          paste0("Ошибка: ", res$error %||% "unknown"))
+      }
+    })
+
+    # ---------- Сбор данных ----------
+    .tr_render_files <- function(category, output_id) {
+      output[[output_id]] <- DT::renderDT({
+        files <- .tr_safe(training_list_files(category, ml_service_url), list())
+        if (length(files) == 0)
+          return(DT::datatable(data.frame(name = character(), size = character(),
+                                          modified = character()),
+                                rownames = FALSE))
+        df <- do.call(rbind, lapply(files, function(f) {
+          data.frame(
+            name = f$name %||% "",
+            size = .tr_format_bytes(f$size %||% 0),
+            modified = format(as.POSIXct(f$mtime %||% 0, origin = "1970-01-01"),
+                              "%Y-%m-%d %H:%M:%S"),
+            stringsAsFactors = FALSE
+          )
+        }))
+        DT::datatable(df, rownames = FALSE, selection = "single",
+                      options = list(pageLength = 10, scrollX = TRUE))
+      })
+    }
+    .tr_render_files("raw", "tr_files_raw")
+    .tr_render_files("labeled", "tr_files_labeled")
+    .tr_render_files("excel", "tr_files_excel")
+
+    shiny::observeEvent(input$btn_tr_files_raw_refresh, .tr_render_files("raw", "tr_files_raw"))
+    shiny::observeEvent(input$btn_tr_files_labeled_refresh,
+                        .tr_render_files("labeled", "tr_files_labeled"))
+    shiny::observeEvent(input$btn_tr_files_excel_refresh,
+                        .tr_render_files("excel", "tr_files_excel"))
+
+    shiny::observeEvent(input$btn_tr_collect, {
+      target <- as.integer(input$tr_collect_target)
+      query <- trimws(input$tr_collect_query %||% "")
+      job_id <- .tr_safe(training_start_collect(
+        target = target,
+        query = if (nzchar(query)) query else NULL,
+        page_size = as.integer(input$tr_collect_page_size),
+        ml_service_url = ml_service_url
+      ), NULL)
+      if (is.null(job_id)) {
+        output$tr_collect_status <- shiny::renderText(
+          "Ошибка: не удалось запустить сбор.")
