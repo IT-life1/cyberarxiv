@@ -1698,3 +1698,507 @@ launch_app <- function(host = "0.0.0.0",
       if (is.null(job_id)) {
         output$tr_collect_status <- shiny::renderText(
           "Ошибка: не удалось запустить сбор.")
+        return()
+      }
+      tr_active_collect(job_id)
+      shiny::showNotification(paste0("Запущен сбор, job_id=", substr(job_id, 1, 8), "…"),
+                              type = "message", duration = 4)
+    })
+
+    # Polled state for collect job
+    tr_collect_job <- shiny::reactivePoll(
+      intervalMillis = 2500, session = session,
+      checkFunc = function() {
+        list(jid = tr_active_collect(), t = Sys.time())
+      },
+      valueFunc = function() {
+        jid <- tr_active_collect()
+        if (is.null(jid)) return(NULL)
+        training_get_job(jid, ml_service_url)
+      }
+    )
+
+    output$tr_collect_status <- shiny::renderText({
+      job <- tr_collect_job()
+      if (is.null(job)) return("idle")
+      paste0("status=", job$status %||% "—",
+             "  progress=", sprintf("%.0f%%", (job$progress %||% 0) * 100),
+             if (!is.null(job$error)) paste0("\nerror: ", job$error) else "")
+    })
+    output$tr_collect_progress <- shiny::renderUI(.tr_render_progress(tr_collect_job()))
+    output$tr_collect_log <- shiny::renderText({
+      job <- tr_collect_job()
+      if (is.null(job) || length(job$log) == 0) return("")
+      paste(utils::tail(unlist(job$log), 200), collapse = "\n")
+    })
+
+    # ---------- Разметка LLM ----------
+    tr_raw_files <- shiny::reactivePoll(
+      intervalMillis = 5000, session = session,
+      checkFunc = function() {
+        list(refresh = input$btn_tr_files_raw_refresh,
+             job_tick = tr_collect_job(),
+             subtab = input$tr_subtabs, ts = Sys.time())
+      },
+      valueFunc = function() {
+        .tr_safe(training_list_files("raw", ml_service_url), list())
+      }
+    )
+    output$ui_tr_label_raw_pick <- shiny::renderUI({
+      files <- tr_raw_files()
+      names_v <- vapply(files, function(f) f$name %||% "", character(1))
+      current <- shiny::isolate(input$tr_label_raw_path)
+      sel <- if (!is.null(current) && current %in% names_v) current
+             else (if (length(names_v) > 0) names_v[1] else "—")
+      shiny::selectInput("tr_label_raw_path", "Файл сырых данных:",
+                         choices = if (length(names_v) > 0) names_v else "—",
+                         selected = sel)
+    })
+
+    shiny::observeEvent(input$btn_tr_label, {
+      raw_path <- input$tr_label_raw_path
+      if (is.null(raw_path) || raw_path == "" || raw_path == "—") {
+        output$tr_label_status <- shiny::renderText("Сначала выбери файл.")
+        return()
+      }
+      job_id <- .tr_safe(training_start_label(
+        raw_path = raw_path,
+        max_rows = as.integer(input$tr_label_max_rows),
+        ml_service_url = ml_service_url
+      ), NULL)
+      if (is.null(job_id)) {
+        output$tr_label_status <- shiny::renderText(
+          "Ошибка: разметка не запущена (проверь api_key).")
+        return()
+      }
+      tr_active_label(job_id)
+    })
+    shiny::observeEvent(input$btn_tr_label_cancel, {
+      jid <- tr_active_label()
+      if (!is.null(jid)) .tr_safe(training_cancel_job(jid, ml_service_url), NULL)
+    })
+
+    tr_label_job <- shiny::reactivePoll(
+      intervalMillis = 2500, session = session,
+      checkFunc = function() list(jid = tr_active_label(), t = Sys.time()),
+      valueFunc = function() {
+        jid <- tr_active_label(); if (is.null(jid)) return(NULL)
+        training_get_job(jid, ml_service_url)
+      }
+    )
+    output$tr_label_status <- shiny::renderText({
+      job <- tr_label_job()
+      if (is.null(job)) return("idle")
+      paste0("status=", job$status %||% "—",
+             "  progress=", sprintf("%.0f%%", (job$progress %||% 0) * 100))
+    })
+    output$tr_label_progress <- shiny::renderUI(.tr_render_progress(tr_label_job()))
+    output$tr_label_log <- shiny::renderText({
+      job <- tr_label_job()
+      if (is.null(job) || length(job$log) == 0) return("")
+      paste(utils::tail(unlist(job$log), 200), collapse = "\n")
+    })
+
+    # ---------- Excel ----------
+    tr_labeled_files <- shiny::reactivePoll(
+      intervalMillis = 5000, session = session,
+      checkFunc = function() {
+        list(refresh = input$btn_tr_files_labeled_refresh,
+             job_tick = tr_label_job(),
+             subtab = input$tr_subtabs, ts = Sys.time())
+      },
+      valueFunc = function() {
+        .tr_safe(training_list_files("labeled", ml_service_url), list())
+      }
+    )
+    output$ui_tr_excel_labeled_pick <- shiny::renderUI({
+      files <- tr_labeled_files()
+      names_v <- vapply(files, function(f) f$name %||% "", character(1))
+      current <- shiny::isolate(input$tr_excel_labeled_path)
+      sel <- if (!is.null(current) && current %in% names_v) current
+             else (if (length(names_v) > 0) names_v[1] else "—")
+      shiny::selectInput("tr_excel_labeled_path", "Файл размеченных данных:",
+                         choices = if (length(names_v) > 0) names_v else "—",
+                         selected = sel)
+    })
+
+    shiny::observeEvent(input$btn_tr_export_excel, {
+      lp <- input$tr_excel_labeled_path
+      if (is.null(lp) || lp == "" || lp == "—") {
+        output$tr_excel_status <- shiny::renderText("Сначала выбери файл.")
+        return()
+      }
+      job_id <- .tr_safe(training_start_export_excel(
+        labeled_path = lp,
+        max_rows = as.integer(input$tr_excel_max_rows),
+        ml_service_url = ml_service_url
+      ), NULL)
+      tr_active_excel(job_id)
+    })
+
+    tr_excel_job <- shiny::reactivePoll(
+      intervalMillis = 2000, session = session,
+      checkFunc = function() list(jid = tr_active_excel(), t = Sys.time()),
+      valueFunc = function() {
+        jid <- tr_active_excel(); if (is.null(jid)) return(NULL)
+        training_get_job(jid, ml_service_url)
+      }
+    )
+    output$tr_excel_status <- shiny::renderText({
+      job <- tr_excel_job()
+      if (is.null(job)) return("idle")
+      lines <- c(paste0("status=", job$status %||% "—"))
+      if (!is.null(job$result$filename))
+        lines <- c(lines, paste0("file: ", job$result$filename))
+      if (!is.null(job$error) && nzchar(job$error %||% ""))
+        lines <- c(lines, paste0("error: ", job$error))
+      if (length(job$log %||% list()) > 0) {
+        last <- utils::tail(unlist(job$log), 30)
+        lines <- c(lines, "--- log (last 30) ---", last)
+      }
+      paste(lines, collapse = "\n")
+    })
+
+    # ---------- Обучение ----------
+    # Reactive list of available .xlsx — refreshes on the polled excel-job
+    # tick, on every visit to the Training subtab, and on the manual Refresh
+    # button. Without this, when a user clicks through tabs the dropdown
+    # would only reflect the snapshot taken on first render.
+    tr_excel_files <- shiny::reactivePoll(
+      intervalMillis = 5000, session = session,
+      checkFunc = function() {
+        list(
+          refresh = input$btn_tr_files_excel_refresh,
+          job_tick = tr_excel_job(),
+          subtab = input$tr_subtabs,
+          ts = Sys.time()
+        )
+      },
+      valueFunc = function() {
+        .tr_safe(training_list_files("excel", ml_service_url), list())
+      }
+    )
+
+    output$ui_tr_train_excel_pick <- shiny::renderUI({
+      files <- tr_excel_files()
+      names_v <- vapply(files, function(f) f$name %||% "", character(1))
+      # Preserve the user's current selection across re-renders so the
+      # dropdown does not silently snap back to the first item every time
+      # the file list refreshes.
+      current <- shiny::isolate(input$tr_train_excel_path)
+      sel <- if (!is.null(current) && current %in% names_v) current
+             else (if (length(names_v) > 0) names_v[1] else "—")
+      shiny::selectInput("tr_train_excel_path", "Файл .xlsx с разметкой:",
+                         choices = if (length(names_v) > 0) names_v else "—",
+                         selected = sel)
+    })
+
+    shiny::observeEvent(input$btn_tr_train, {
+      ep <- input$tr_train_excel_path
+      if (is.null(ep) || ep == "" || ep == "—") {
+        output$tr_train_status <- shiny::renderText("Сначала выбери .xlsx.")
+        return()
+      }
+      mlflow_uri <- trimws(input$tr_train_mlflow_uri %||% "")
+      if (!nzchar(mlflow_uri))
+        mlflow_uri <- Sys.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+      job_id <- .tr_safe(training_start_train(
+        excel_path = ep,
+        model_name_out = input$tr_train_model_name,
+        base_model = input$tr_train_base_model,
+        epochs = as.integer(input$tr_train_epochs),
+        batch_size = as.integer(input$tr_train_batch_size),
+        lr = as.numeric(input$tr_train_lr),
+        max_length = as.integer(input$tr_train_max_length),
+        test_size = as.numeric(input$tr_train_test_size),
+        val_size = as.numeric(input$tr_train_val_size),
+        mlflow_tracking_uri = mlflow_uri,
+        ml_service_url = ml_service_url
+      ), NULL)
+      tr_active_train(job_id)
+    })
+    shiny::observeEvent(input$btn_tr_train_cancel, {
+      jid <- tr_active_train()
+      if (!is.null(jid)) .tr_safe(training_cancel_job(jid, ml_service_url), NULL)
+    })
+
+    tr_train_job <- shiny::reactivePoll(
+      intervalMillis = 2000, session = session,
+      checkFunc = function() list(jid = tr_active_train(), t = Sys.time()),
+      valueFunc = function() {
+        jid <- tr_active_train(); if (is.null(jid)) return(NULL)
+        training_get_job(jid, ml_service_url)
+      }
+    )
+    output$tr_train_status <- shiny::renderText({
+      job <- tr_train_job()
+      if (is.null(job)) return("idle")
+      paste0("status=", job$status %||% "—",
+             "  progress=", sprintf("%.0f%%", (job$progress %||% 0) * 100),
+             if (!is.null(job$result$checkpoint))
+               paste0("\nfile: ", basename(job$result$checkpoint)) else "")
+    })
+    output$tr_train_progress <- shiny::renderUI(.tr_render_progress(tr_train_job()))
+    output$tr_train_log <- shiny::renderText({
+      job <- tr_train_job()
+      if (is.null(job) || length(job$log) == 0) return("")
+      paste(utils::tail(unlist(job$log), 400), collapse = "\n")
+    })
+    output$tr_mlflow_link <- shiny::renderUI({
+      uri <- Sys.getenv("MLFLOW_UI_URL", "http://localhost:5000")
+      shiny::tags$a(href = uri, target = "_blank",
+                    paste0("Открыть MLflow UI (", uri, ")"))
+    })
+
+    shiny::observeEvent(input$btn_tr_reload_models, {
+      res <- .tr_safe(training_reload_models(ml_service_url), NULL)
+      if (is.null(res)) {
+        output$tr_reload_status <- shiny::renderText("Ошибка перезагрузки.")
+      } else {
+        output$tr_reload_status <- shiny::renderText(
+          paste0("✓ Загружено: ",
+                 paste(unlist(res$models %||% list()), collapse = ", ")))
+      }
+    })
+
+    # Register a freshly-trained model as an ML task entry that the dropdowns
+    # on the ML and ETL tabs can pick up. Writes to a user override yaml so
+    # we never touch the package-bundled inst/ml_tasks.yml.
+    shiny::observeEvent(input$btn_tr_register_task, {
+      task_name <- trimws(input$tr_register_task_name %||% "")
+      label     <- trimws(input$tr_register_task_label %||% "")
+      lang      <- trimws(input$tr_register_task_lang %||% "en")
+      model_nm  <- trimws(input$tr_train_model_name %||% "")
+
+      if (!nzchar(task_name) || !nzchar(label) || !nzchar(model_nm)) {
+        output$tr_register_status <- shiny::renderText(
+          "Заполни идентификатор задачи, label и убедись, что Имя выходной модели задано выше.")
+        return()
+      }
+      res <- tryCatch(
+        register_ml_task(task_name = task_name, label = label,
+                          model_name = model_nm, language = lang),
+        error = function(e) list(error = conditionMessage(e))
+      )
+      if (!is.null(res$error)) {
+        output$tr_register_status <- shiny::renderText(
+          paste0("Ошибка: ", res$error))
+        return()
+      }
+
+      # Refresh the in-memory task tables so subsequent UI re-renders pick
+      # up the new entry without a Shiny restart.
+      new_tasks   <- tryCatch(load_ml_tasks(), error = function(e) ml_tasks_info)
+      new_choices <- setNames(names(new_tasks),
+                              vapply(new_tasks, `[[`, character(1), "label"))
+      ml_tasks_info   <<- new_tasks
+      ml_task_choices <<- new_choices
+      shiny::updateSelectInput(session, "ml_task_batch", choices = new_choices)
+      shiny::updateSelectInput(session, "ml_task_adhoc", choices = new_choices)
+      shiny::updateSelectInput(session, "etl_ml_task",   choices = new_choices)
+
+      output$tr_register_status <- shiny::renderText(
+        paste0("✓ Задача '", task_name, "' зарегистрирована (",
+               lang, " → ", model_nm, "). ",
+               "Зайди на вкладку ML-классификатор — она уже в дропдауне."))
+    })
+
+    # ---------- Все джобы ----------
+    # Reactive list of jobs, refreshing every 4 seconds while the Джобы
+    # subtab is visible. Without polling the table only updated on
+    # button-click, which was confusing during long training runs.
+    tr_jobs_data <- shiny::reactivePoll(
+      intervalMillis = 4000, session = session,
+      checkFunc = function() list(
+        refresh = input$btn_tr_jobs_refresh,
+        subtab = input$tr_subtabs,
+        ts = Sys.time()
+      ),
+      valueFunc = function() {
+        .tr_safe(training_list_jobs(limit = 100,
+                                    ml_service_url = ml_service_url), list())
+      }
+    )
+
+    output$tr_jobs_table <- DT::renderDT({
+      jobs <- tr_jobs_data()
+      if (length(jobs) == 0)
+        return(DT::datatable(data.frame(), rownames = FALSE))
+      df <- do.call(rbind, lapply(jobs, function(j) {
+        log_lines <- j$log %||% list()
+        last_log  <- if (length(log_lines) > 0) tail(unlist(log_lines), 1) else ""
+        data.frame(
+          id       = substr(j$id %||% "", 1, 8),
+          type     = j$type %||% "",
+          status   = j$status %||% "",
+          progress = sprintf("%.0f%%", (j$progress %||% 0) * 100),
+          created  = format(as.POSIXct(j$created_at %||% 0, origin = "1970-01-01"),
+                            "%Y-%m-%d %H:%M:%S"),
+          updated  = format(as.POSIXct(j$updated_at %||% 0, origin = "1970-01-01"),
+                            "%Y-%m-%d %H:%M:%S"),
+          file     = j$result$filename %||% j$result$checkpoint %||% "",
+          error    = j$error %||% "",
+          log      = last_log,
+          stringsAsFactors = FALSE
+        )
+      }))
+      DT::datatable(df, rownames = FALSE, selection = "single",
+                    options = list(pageLength = 15, scrollX = TRUE,
+                                   order = list(list(4, "desc")))) |>
+        DT::formatStyle("status",
+          backgroundColor = DT::styleEqual(
+            c("completed", "failed",  "running", "cancelled"),
+            c("#c8e6c9",   "#ffcdd2", "#bbdefb", "#eeeeee")
+          ),
+          color = DT::styleEqual(
+            c("completed", "failed",  "running", "cancelled"),
+            c("#1b5e20",   "#b71c1c", "#0d47a1", "#424242")
+          ),
+          fontWeight = "bold"
+        )
+    }, server = FALSE)
+
+    output$tr_job_log_detail <- shiny::renderText({
+      sel <- input$tr_jobs_table_rows_selected
+      if (is.null(sel) || length(sel) == 0)
+        return("Выберите строку для просмотра лога.")
+      jobs <- tr_jobs_data()
+      if (length(jobs) == 0 || sel > length(jobs)) return("")
+      job <- jobs[[sel]]
+      log_lines <- job$log %||% list()
+      err       <- job$error %||% ""
+      out <- character(0)
+      if (nzchar(err)) out <- c(out, paste0("[ERROR] ", err))
+      if (length(log_lines) > 0) out <- c(out, unlist(log_lines))
+      if (length(out) == 0) return("(лог пуст)")
+      paste(tail(out, 100), collapse = "\n")
+    })
+
+    # ---- Настройки ----
+    output$settings_info <- shiny::renderPrint({
+      cat("CYBERARXIV_DB_PATH =", Sys.getenv("CYBERARXIV_DB_PATH", "<не задан>"), "\n")
+      cat("ML_SERVICE_URL     =", ml_service_url, "\n")
+      cat("MODELS_DIR         =",
+          Sys.getenv("MODELS_DIR", "/srv/cyberarxiv-ml/models"), "\n")
+      cat("Рабочая директория =", getwd(), "\n")
+      cat("R:", R.version.string, "\n\n")
+      cat("Коллекторы:\n")
+      if (!is.null(collectors_df) && nrow(collectors_df) > 0) {
+        for (i in seq_len(nrow(collectors_df))) {
+          cat(sprintf("  [%s] %-20s %s\n",
+              if (collectors_df$enabled[i]) "on " else "off",
+              collectors_df$name[i], collectors_df$type[i]))
+        }
+      } else cat("  (не найдено)\n")
+    })
+    shiny::observeEvent(input$btn_reinit_db, {
+      res <- tryCatch({
+        db_path <- Sys.getenv("CYBERARXIV_DB_PATH", "data/cyberarxiv.duckdb")
+        dir.create(dirname(db_path), showWarnings = FALSE, recursive = TRUE)
+        con <- DBI::dbConnect(duckdb::duckdb(), dbdir = db_path)
+        on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+        .cyberarxiv_init_schema(con)
+        "Схема инициализирована."
+      }, error = function(e) paste("ERROR:", conditionMessage(e)))
+      settings_log_text(res)
+      reload_publications()
+    })
+    output$settings_log <- shiny::renderText({ settings_log_text() })
+
+    # ---- Удаление статей ----
+    # Обновить доступные теги и источники при смене данных
+    shiny::observe({
+      df <- publications()
+      if (is.null(df) || nrow(df) == 0) return()
+      if ("tag" %in% names(df)) {
+        tags <- sort(unique(df$tag[!is.na(df$tag) & nzchar(df$tag)]))
+        shiny::updateSelectizeInput(session, "del_tags", choices = tags)
+      }
+      if ("source" %in% names(df)) {
+        srcs <- sort(unique(df$source[!is.na(df$source) & nzchar(df$source)]))
+        shiny::updateSelectInput(session, "del_source",
+                                 choices = c("Все источники" = "", setNames(srcs, srcs)))
+      }
+    })
+
+    # Показать сколько статей будет удалено
+    output$del_preview <- shiny::renderText({
+      df   <- publications()
+      tags <- input$del_tags
+      src  <- trimws(input$del_source %||% "")
+      if (is.null(df) || nrow(df) == 0) return("")
+      sub  <- df
+      if (length(tags) > 0) sub <- sub[!is.na(sub$tag) & sub$tag %in% tags, ]
+      if (nzchar(src))       sub <- sub[!is.na(sub$source) & sub$source == src, ]
+      if (nrow(sub) == 0) return("Нет статей под фильтр")
+      paste0("Будет удалено: ", nrow(sub), " статей")
+    })
+
+    shiny::observeEvent(input$btn_delete_articles, {
+      tags <- input$del_tags
+      src  <- trimws(input$del_source %||% "")
+      if (length(tags) == 0 && !nzchar(src)) {
+        output$del_status <- shiny::renderText("Выберите хотя бы один тег или источник.")
+        return()
+      }
+      # Предварительный подсчёт для диалога
+      df  <- publications()
+      sub <- df
+      if (length(tags) > 0) sub <- sub[!is.na(sub$tag) & sub$tag %in% tags, ]
+      if (nzchar(src))       sub <- sub[!is.na(sub$source) & sub$source == src, ]
+      n_preview <- nrow(sub)
+
+      filter_desc <- character(0)
+      if (length(tags) > 0) filter_desc <- c(filter_desc, paste("тег:", paste(tags, collapse = ", ")))
+      if (nzchar(src))       filter_desc <- c(filter_desc, paste("источник:", src))
+
+      shiny::showModal(shiny::modalDialog(
+        title = "Подтверждение удаления",
+        shiny::p(paste0("Будет удалено ", n_preview, " статей:")),
+        shiny::p(paste(filter_desc, collapse = " | ")),
+        shiny::p(shiny::strong("Это действие необратимо.")),
+        footer = shiny::tagList(
+          shiny::modalButton("Отмена"),
+          shiny::actionButton("btn_delete_confirm", "Удалить", class = "btn-danger")
+        ),
+        easyClose = TRUE
+      ))
+    })
+
+    shiny::observeEvent(input$btn_delete_confirm, {
+      shiny::removeModal()
+      tags <- input$del_tags
+      src  <- trimws(input$del_source %||% "")
+
+      res <- tryCatch({
+        con <- .cyberarxiv_connect()
+        on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+
+        where  <- character(0)
+        params <- list()
+
+        if (length(tags) > 0) {
+          where  <- c(where, paste0("tag IN (", paste(rep("?", length(tags)), collapse = ","), ")"))
+          params <- c(params, as.list(tags))
+        }
+        if (nzchar(src)) {
+          where  <- c(where, "source = ?")
+          params <- c(params, list(src))
+        }
+
+        sql <- paste0("DELETE FROM papers WHERE ", paste(where, collapse = " AND "))
+        n   <- DBI::dbExecute(con, sql, params = params)
+        paste0("Удалено ", n, " статей.")
+      }, error = function(e) paste("ERROR:", conditionMessage(e)))
+
+      settings_log_text(res)
+      reload_publications()
+    })
+  }
+}
+
+# ============================================================
+#  Utils
+# ============================================================
+
+`%||%` <- function(a, b) if (is.null(a) || (is.atomic(a) && length(a) == 0)) b else a
