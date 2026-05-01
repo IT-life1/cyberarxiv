@@ -605,3 +605,654 @@ launch_app <- function(host = "0.0.0.0",
 }
 
 # ============================================================
+#  SERVER
+# ============================================================
+
+#' @noRd
+.build_server <- function(ml_service_url, init_tasks = NULL, init_choices = NULL) {
+  function(input, output, session) {
+
+    publications      <- shiny::reactiveVal(NULL)
+    etl_log_text      <- shiny::reactiveVal("")
+    ml_log_text       <- shiny::reactiveVal("")
+    settings_log_text <- shiny::reactiveVal("")
+
+    # Загрузить доступные коллекторы
+    collectors_df <- tryCatch(list_collectors(), error = function(e) NULL)
+    collector_choices <- if (!is.null(collectors_df) && nrow(collectors_df) > 0) {
+      setNames(collectors_df$name, paste0(collectors_df$label, " [", collectors_df$type, "]"))
+    } else {
+      character(0)
+    }
+    enabled_collectors <- if (!is.null(collectors_df))
+      collectors_df$name[collectors_df$enabled] else character(0)
+
+    # ML-задачи: начинаем со статических (переданных из launch_app), затем обогащаем
+    # доступностью моделей из сервиса (может быть недоступен при старте)
+    ml_tasks_info   <- init_tasks  %||% load_ml_tasks()
+    ml_task_choices <- init_choices %||% setNames(names(ml_tasks_info),
+                                                  vapply(ml_tasks_info, `[[`, character(1), "label"))
+
+    # ---- Динамические UI-элементы ----
+    output$ui_etl_sources <- shiny::renderUI({
+      if (length(collector_choices) == 0) {
+        shiny::helpText("Коллекторы не найдены.")
+      } else {
+        shiny::checkboxGroupInput("etl_sources", NULL,
+          choices  = collector_choices,
+          selected = enabled_collectors)
+      }
+    })
+
+    output$ui_etl_lang_routing <- shiny::renderUI({
+      if (!isTRUE(input$etl_with_ml)) return(NULL)
+      shiny::div(
+        style = paste0("background:white; border-left:3px solid #2c5282; ",
+                       "border-radius:4px; padding:10px 14px; margin-bottom:8px; ",
+                       "box-shadow:0 1px 3px rgba(0,0,0,0.06);"),
+        shiny::div(
+          style = "font-size:11px; color:#888; text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px;",
+          "\U1F916 Задача ML"
+        ),
+        shiny::selectInput("etl_ml_task", NULL,
+                           choices = ml_task_choices, selected = names(ml_task_choices)[1],
+                           width = "100%"),
+        shiny::uiOutput("ui_etl_task_hint")
+      )
+    })
+
+    output$ui_etl_task_hint <- shiny::renderUI({
+      task_id <- input$etl_ml_task %||% names(ml_task_choices)[1]
+      task    <- ml_tasks_info[[task_id]]
+      if (is.null(task)) return(NULL)
+      avail   <- task$available_models %||% list()
+      all_m   <- task$models %||% list()
+      lines <- lapply(names(all_m), function(lang) {
+        m    <- all_m[[lang]]
+        ok   <- lang %in% names(avail)
+        icon <- if (ok) "✓" else "–"
+        col  <- if (ok) "#276749" else "#999"
+        shiny::div(style = paste0("font-size:12px; color:", col, ";"),
+                   paste0(icon, " ", lang, " → ", m,
+                          if (!ok) " (не загружена)" else ""))
+      })
+      shiny::tagList(lines)
+    })
+
+    output$ui_etl_collector_params <- shiny::renderUI({
+      sel <- if (length(input$etl_sources) > 0) input$etl_sources else enabled_collectors
+      if (length(sel) == 0 || is.null(collectors_df) || nrow(collectors_df) == 0)
+        return(NULL)
+
+      active_df <- collectors_df[collectors_df$name %in% sel, ]
+      searchable_types <- c("atom", "core_api", "oai_pmh", "rss")
+      configurable <- active_df[active_df$type %in% searchable_types, ]
+      if (nrow(configurable) == 0) return(NULL)
+
+      hint <- list(
+        atom     = "cat:cs.CR AND all:ransomware",
+        core_api = "cybersecurity OR malware OR phishing",
+        oai_pmh  = "from: YYYY-MM-DD",
+        rss      = ""
+      )
+
+      card_style <- paste0(
+        "background:white; border-left:2px solid #4a90d9; ",
+        "border-radius:3px; padding:5px 8px; margin-bottom:5px; ",
+        "box-shadow:0 1px 2px rgba(0,0,0,0.05);"
+      )
+      label_style <- "font-size:10px; color:#888; text-transform:uppercase; letter-spacing:.04em; margin-bottom:2px;"
+
+      cards <- lapply(seq_len(nrow(configurable)), function(i) {
+        nm  <- configurable$name[i]
+        typ <- configurable$type[i]
+        lbl <- configurable$label[i]
+
+        input_el <- if (typ == "oai_pmh") {
+          shiny::textInput(paste0("cq_", nm), NULL, value = "",
+                           placeholder = "2024-01-01", width = "100%")
+        } else {
+          shiny::textInput(paste0("cq_", nm), NULL, value = "",
+                           placeholder = hint[[typ]] %||% "", width = "100%")
+        }
+
+        shiny::div(style = card_style,
+          shiny::div(style = label_style, lbl),
+          input_el
+        )
+      })
+
+      shiny::tagList(
+        shiny::div(style = "font-size:12px; font-weight:600; color:#1e3a5f; margin-bottom:4px;",
+                   "\U1F50D Запросы (пусто = по умолчанию):"),
+        shiny::tagList(cards)
+      )
+    })
+
+    shiny::updateSelectInput(session, "ml_task_batch", choices = ml_task_choices)
+    shiny::updateSelectInput(session, "ml_task_adhoc", choices = ml_task_choices)
+
+    # ---- Загрузка из БД ----
+    reload_publications <- function() {
+      res <- tryCatch(load_publications(), error = function(e) {
+        shiny::showNotification(paste("Ошибка БД:", conditionMessage(e)),
+                                type = "error", duration = 8)
+        NULL
+      })
+      publications(res)
+    }
+    reload_publications()
+
+    # ---- Обзор ----
+    output$m_total <- shiny::renderText({
+      df <- publications(); if (is.null(df)) "—" else format(nrow(df), big.mark = " ")
+    })
+    output$m_ml <- shiny::renderText({
+      df <- publications()
+      if (is.null(df) || nrow(df) == 0) return("—")
+      task_cols <- grep("^ml_tag_", names(df), value = TRUE)
+      if (length(task_cols) == 0) return("—")
+      # Статья считается классифицированной если есть хотя бы одна task-колонка с результатом
+      n <- sum(apply(df[, task_cols, drop = FALSE], 1, function(r)
+        any(!is.na(r) & nzchar(r))
+      ))
+      format(n, big.mark = " ")
+    })
+    output$m_sources <- shiny::renderText({
+      df <- publications()
+      if (is.null(df) || !"source" %in% names(df)) "—"
+      else as.character(length(unique(df$source[!is.na(df$source)])))
+    })
+    output$m_ml_status <- shiny::renderUI({
+      input$btn_refresh_overview
+      shiny::invalidateLater(30000)
+      ok <- tryCatch(ml_service_is_healthy(ml_service_url), error = function(e) FALSE)
+      if (isTRUE(ok))
+        shiny::span(class = "status-ok",  "✓ OK",  style = "font-size:18px;")
+      else
+        shiny::span(class = "status-fail", "✗ OFF", style = "font-size:18px;")
+    })
+
+    output$plot_sources <- plotly::renderPlotly({
+      df <- publications()
+      if (is.null(df) || nrow(df) == 0 || !"source" %in% names(df))
+        return(plotly::plot_ly() |> plotly::layout(title = "Нет данных"))
+      cnts <- dplyr::count(df, source, sort = TRUE)
+      plotly::plot_ly(cnts, x = ~reorder(source, n), y = ~n, type = "bar",
+                      marker = list(color = "#2c5282")) |>
+        plotly::layout(xaxis = list(tickangle = -30, title = ""),
+                       yaxis = list(title = "Статей"),
+                       margin = list(b = 80))
+    })
+    output$plot_tags <- plotly::renderPlotly({
+      df <- publications()
+      if (is.null(df) || nrow(df) == 0 || !"tag" %in% names(df))
+        return(plotly::plot_ly() |> plotly::layout(title = "Нет данных"))
+      cnts <- dplyr::count(df, tag, sort = TRUE) |> head(20)
+      plotly::plot_ly(cnts, x = ~reorder(tag, n), y = ~n, type = "bar",
+                      marker = list(color = "#e6550d")) |>
+        plotly::layout(xaxis = list(tickangle = -45, title = ""),
+                       yaxis = list(title = "Статей"),
+                       margin = list(b = 110))
+    })
+    output$plot_month <- plotly::renderPlotly({
+      df <- publications()
+      if (is.null(df) || nrow(df) == 0 || !"published_date" %in% names(df))
+        return(plotly::plot_ly() |> plotly::layout(title = "Нет данных"))
+      df2 <- df |>
+        dplyr::mutate(month = lubridate::floor_date(as.POSIXct(published_date), "month")) |>
+        dplyr::filter(!is.na(month)) |>
+        dplyr::count(month) |>
+        dplyr::arrange(month)
+      plotly::plot_ly(df2, x = ~month, y = ~n, type = "scatter", mode = "lines+markers",
+                      line = list(color = "#2c5282", width = 2)) |>
+        plotly::layout(xaxis = list(title = "Месяц"), yaxis = list(title = "Кол-во"))
+    })
+    shiny::observeEvent(input$btn_refresh_overview, {
+      reload_publications()
+      shiny::showNotification("Обновлено", type = "message", duration = 2)
+    })
+
+    # ---- ETL ----
+    shiny::observeEvent(input$btn_run_etl, {
+      n_req    <- as.integer(input$etl_max_results)
+      only_new <- isTRUE(input$etl_only_new)
+      use_ml   <- isTRUE(input$etl_with_ml)
+      sel_src  <- input$etl_sources
+      sources  <- if (length(sel_src) > 0) sel_src else NULL
+
+      # Языковой маппинг берём из выбранной задачи
+      task_id         <- trimws(input$etl_ml_task %||% names(ml_task_choices)[1])
+      language_models <- (ml_tasks_info[[task_id]]$models) %||% list(en = "best_model")
+
+      # Per-collector query overrides
+      active_names    <- if (!is.null(sources)) sources else enabled_collectors
+      param_overrides <- list()
+      if (!is.null(collectors_df)) {
+        for (nm in active_names) {
+          row   <- collectors_df[collectors_df$name == nm, ]
+          if (nrow(row) == 0) next
+          q_val <- trimws(input[[paste0("cq_", nm)]] %||% "")
+          if (!nzchar(q_val)) next
+          param_overrides[[nm]] <- if (row$type == "atom") {
+            list(params = list(search_query = q_val,
+                               sortBy = "submittedDate", sortOrder = "descending"))
+          } else if (row$type == "core_api") {
+            list(query = q_val)
+          } else if (row$type == "oai_pmh") {
+            list(oai_from = q_val)
+          }
+        }
+      }
+
+      etl_log_text("")
+      append_log <- function(msg) {
+        etl_log_text(paste0(etl_log_text(),
+                            format(Sys.time(), "[%H:%M:%S] "), msg, "\n"))
+      }
+
+      shiny::withProgress(message = "ETL работает...", value = 0, {
+        append_log(paste0("Коллекторы: ",
+                          if (is.null(sources)) "все enabled" else paste(sources, collapse = ", ")))
+        append_log(paste0("max_results=", n_req, ", only_new=", only_new))
+        shiny::incProgress(0.1)
+
+        # Захватываем message() из etl()
+        msgs <- character(0)
+        withCallingHandlers(
+          tryCatch(
+            etl(max_results = n_req, only_new = only_new, sources = sources,
+                param_overrides = param_overrides),
+            error = function(e) append_log(paste("ERROR:", conditionMessage(e)))
+          ),
+          message = function(m) {
+            append_log(trimws(conditionMessage(m)))
+            invokeRestart("muffleMessage")
+          }
+        )
+        shiny::incProgress(0.6)
+
+        if (use_ml) {
+          if (ml_service_is_healthy(ml_service_url)) {
+            task_label <- ml_tasks_info[[task_id]]$label %||% task_id
+            append_log(paste0("ML-классификация [задача: ", task_label, "]..."))
+            raw <- tryCatch(load_raw_data(), error = function(e) NULL)
+            if (!is.null(raw) && nrow(raw) > 0) {
+              available <- tryCatch(
+                names(list_ml_models(ml_service_url)$models),
+                error = function(e) character(0)
+              )
+              ml_res <- tryCatch(
+                .classify_by_language(raw, language_models, available, ml_service_url),
+                error = function(e) { append_log(paste("ML ERROR:", conditionMessage(e))); NULL }
+              )
+              if (!is.null(ml_res) && nrow(ml_res) > 0) {
+                upd <- update_ml_tags(ml_res, task_id = task_id)
+                append_log(paste0("ML [", task_id, "]: обновлено ", upd$updated, " записей"))
+              } else {
+                append_log("ML: нет результатов (модели не загружены или пропущены).")
+              }
+            }
+          } else {
+            append_log(paste0("ML-сервис недоступен (", ml_service_url, "), пропущено."))
+          }
+        }
+        shiny::incProgress(0.3)
+
+        append_log("ETL завершён.")
+        reload_publications()
+        shiny::showNotification("ETL завершён", type = "message", duration = 4)
+      })
+
+      output$etl_status <- shiny::renderUI(
+        shiny::span(class = "status-ok", "✓ Готово"))
+    })
+
+    output$etl_log <- shiny::renderText({ etl_log_text() })
+    output$etl_result_table <- DT::renderDT({
+      df <- publications()
+      if (is.null(df) || nrow(df) == 0) return(NULL)
+      df |>
+        dplyr::arrange(dplyr::desc(ingested_at)) |>
+        dplyr::select(dplyr::any_of(c("paper_id", "title", "source",
+                                      "language", "tag", "ml_tag", "published_date"))) |>
+        head(20)
+    }, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE)
+
+    # ---- Таблица статей ----
+    shiny::observe({
+      df <- publications()
+      if (is.null(df) || nrow(df) == 0) return()
+      if ("published_date" %in% names(df)) {
+        years <- sort(unique(format(as.POSIXct(df$published_date), "%Y")), decreasing = TRUE)
+        years <- years[!is.na(years) & nzchar(years)]
+        shiny::updateSelectInput(session, "tbl_year",
+          choices = c("Все" = "", setNames(years, years)))
+      }
+      if ("source" %in% names(df)) {
+        srcs <- sort(unique(df$source[!is.na(df$source) & nzchar(df$source)]))
+        shiny::updateSelectInput(session, "tbl_source",
+          choices = c("Все" = "", setNames(srcs, srcs)))
+      }
+      if ("language" %in% names(df)) {
+        langs <- sort(unique(df$language[!is.na(df$language) & nzchar(df$language)]))
+        shiny::updateSelectInput(session, "tbl_lang",
+          choices = c("Все" = "", setNames(langs, langs)))
+      }
+      if ("tag" %in% names(df)) {
+        tg <- sort(unique(df$tag[!is.na(df$tag)]))
+        shiny::updateSelectInput(session, "tbl_tag",
+          choices = c("Все" = "", setNames(tg, tg)))
+      }
+      # ML-задачи для таблицы
+      task_ids <- sub("^ml_tag_", "", grep("^ml_tag_", names(df), value = TRUE))
+      tasks    <- tryCatch(load_ml_tasks(), error = function(e) list())
+      if (length(task_ids) == 0) {
+        shiny::updateSelectInput(session, "tbl_ml_task",
+          choices = c("(нет ML-данных)" = ""), selected = "")
+      } else {
+        ch <- c("(не показывать)" = "",
+                setNames(task_ids, vapply(task_ids, function(tid)
+                  tasks[[tid]]$label %||% tid, character(1))))
+        cur <- isolate(input$tbl_ml_task)
+        # Сохранить выбор пользователя; если ещё не выбрано — взять первую задачу автоматически
+        sel <- if (!is.null(cur) && nzchar(cur) && cur %in% task_ids) cur else task_ids[1]
+        shiny::updateSelectInput(session, "tbl_ml_task", choices = ch, selected = sel)
+      }
+    })
+
+    filtered <- shiny::reactive({
+      df <- publications()
+      if (is.null(df) || nrow(df) == 0) return(df)
+
+      q <- trimws(input$tbl_search %||% "")
+      if (nzchar(q)) {
+        pat  <- tolower(q)
+        keep <- grepl(pat, tolower(df$title    %||% ""), fixed = TRUE) |
+                grepl(pat, tolower(df$abstract %||% ""), fixed = TRUE)
+        df <- df[keep, , drop = FALSE]
+      }
+      y <- trimws(input$tbl_year %||% "")
+      if (nzchar(y) && "published_date" %in% names(df)) {
+        yrs <- format(as.POSIXct(df$published_date), "%Y")
+        df  <- df[!is.na(yrs) & yrs == y, , drop = FALSE]
+      }
+      src <- trimws(input$tbl_source %||% "")
+      if (nzchar(src) && "source" %in% names(df))
+        df <- df[!is.na(df$source) & df$source == src, , drop = FALSE]
+
+      lang <- trimws(input$tbl_lang %||% "")
+      if (nzchar(lang) && "language" %in% names(df))
+        df <- df[!is.na(df$language) & df$language == lang, , drop = FALSE]
+
+      tg <- trimws(input$tbl_tag %||% "")
+      if (nzchar(tg) && "tag" %in% names(df))
+        df <- df[!is.na(df$tag) & df$tag == tg, , drop = FALSE]
+
+      df
+    })
+
+    output$tbl_count <- shiny::renderText({
+      df <- filtered(); if (is.null(df)) "—"
+      else paste0("Показано: ", format(nrow(df), big.mark = " "), " статей")
+    })
+    output$tbl_main <- DT::renderDT({
+      df      <- filtered()
+      task_id <- trimws(input$tbl_ml_task %||% "")
+      if (is.null(df) || nrow(df) == 0) return(NULL)
+
+      base_cols <- c("paper_id", "title", "source", "language", "tag", "published_date", "link")
+      show <- df[, intersect(base_cols, names(df)), drop = FALSE]
+
+      # Добавить ML-результаты выбранной задачи с понятными именами колонок
+      if (nzchar(task_id)) {
+        tag_col  <- paste0("ml_tag_", task_id)
+        conf_col <- paste0("ml_confidence_", task_id)
+        if (tag_col %in% names(df)) {
+          show[[paste0("ML-тег (", task_id, ")")]]  <- df[[tag_col]]
+          if (conf_col %in% names(df))
+            show[[paste0("ML-увер. (", task_id, ")")]] <- round(df[[conf_col]], 3)
+        }
+      }
+
+      title_idx <- which(names(show) == "title") - 1L
+      DT::datatable(show, filter = "top", rownames = FALSE, escape = FALSE,
+        options = list(pageLength = 15, scrollX = TRUE,
+          columnDefs = if (length(title_idx) > 0) list(list(
+            targets = title_idx,
+            render  = DT::JS("function(d,t){",
+              "if(t!='display')return d;",
+              "if(!d)return '';",
+              "return d.length>120?d.substr(0,120)+'…':d;","}")
+          )) else list()
+        )
+      )
+    })
+    output$btn_tbl_export <- shiny::downloadHandler(
+      filename = function() paste0("cyberarxiv_", Sys.Date(), ".csv"),
+      content  = function(file) {
+        df <- filtered()
+        utils::write.csv(if (is.null(df)) data.frame() else df,
+                         file, row.names = FALSE, fileEncoding = "UTF-8")
+      }
+    )
+    shiny::observeEvent(input$btn_tbl_refresh, reload_publications())
+
+    # ---- ML ----
+    shiny::observeEvent(input$btn_ml_check, {
+      ok <- tryCatch(ml_service_is_healthy(ml_service_url), error = function(e) FALSE)
+      output$ml_info <- shiny::renderPrint({
+        if (!isTRUE(ok)) {
+          cat("STATUS: ✗ сервис недоступен\nURL:", ml_service_url, "\n")
+          return()
+        }
+        cat("STATUS: ✓ OK\nURL:", ml_service_url, "\n\n")
+        info <- tryCatch({
+          resp <- httr2::request(ml_service_url) |>
+            httr2::req_url_path("models") |>
+            httr2::req_timeout(10) |>
+            httr2::req_perform()
+          httr2::resp_body_json(resp)
+        }, error = function(e) list(error = conditionMessage(e)))
+
+        if (!is.null(info$models) && length(info$models) > 0) {
+          cat("Загружено моделей:", length(info$models), "\n")
+          cat("По умолчанию:    ", info$default %||% "—", "\n\n")
+          for (nm in names(info$models)) {
+            m <- info$models[[nm]]
+            cat(sprintf("  [%s]  %d классов  |  base: %s\n",
+                        nm, m$num_classes %||% 0, m$base_model %||% "—"))
+          }
+        } else {
+          cat("Нет загруженных моделей.\n")
+          cat("Положи .pt файлы в MODELS_DIR.\n")
+        }
+      })
+
+      # Обновить задачи с актуальными данными о загруженных моделях
+      new_tasks   <- tryCatch(list_ml_tasks(ml_service_url), error = function(e) load_ml_tasks())
+      new_choices <- setNames(names(new_tasks),
+                              vapply(new_tasks, `[[`, character(1), "label"))
+      ml_tasks_info   <<- new_tasks
+      ml_task_choices <<- new_choices
+      shiny::updateSelectInput(session, "ml_task_batch", choices = new_choices)
+      shiny::updateSelectInput(session, "ml_task_adhoc", choices = new_choices)
+      shiny::updateSelectInput(session, "etl_ml_task",   choices = new_choices)
+    })
+
+    output$ml_task_col_info <- shiny::renderUI({
+      task_id <- trimws(input$ml_task_batch %||% names(ml_task_choices)[1])
+      if (!nzchar(task_id)) return(NULL)
+      tag_col  <- paste0("ml_tag_", task_id)
+      conf_col <- paste0("ml_confidence_", task_id)
+      shiny::div(
+        style = "background:#f0f4f8; border-left:3px solid #00A896; padding:8px 12px; margin-bottom:10px; font-size:12px;",
+        shiny::strong("Результат запишется в:"),
+        shiny::br(),
+        shiny::code(tag_col), " · ", shiny::code(conf_col)
+      )
+    })
+
+    # ml_batch_progress — заглушка, реальный прогресс через shiny::withProgress
+    output$ml_batch_progress <- shiny::renderUI(NULL)
+
+    run_ml_batch <- function(only_new) {
+      if (!ml_service_is_healthy(ml_service_url)) {
+        ml_log_text(paste0("ML-сервис недоступен (", ml_service_url, ")."))
+        return()
+      }
+      task_id   <- trimws(input$ml_task_batch %||% names(ml_task_choices)[1])
+      lang_mdls <- (ml_tasks_info[[task_id]]$models) %||% list(en = "best_model")
+      task_col  <- paste0("ml_tag_", task_id)
+
+      pubs <- publications()
+      if (is.null(pubs) || nrow(pubs) == 0) {
+        ml_log_text("База данных пустая. Сначала запусти ETL."); return()
+      }
+
+      df <- pubs
+      df$id <- df$paper_id
+
+      if (only_new && task_col %in% names(df)) {
+        df <- df[is.na(df[[task_col]]), , drop = FALSE]
+      }
+
+      if (nrow(df) == 0) {
+        ml_log_text(paste0("Все статьи уже классифицированы задачей «", task_id, "»."))
+        return()
+      }
+
+      task_label <- ml_tasks_info[[task_id]]$label %||% task_id
+      total      <- nrow(df)
+      ml_log_text(paste0("Классификация ", total, " статей [задача: ", task_label, "]..."))
+
+      available <- tryCatch(names(list_ml_models(ml_service_url)$models),
+                            error = function(e) character(0))
+
+      lang_col  <- if ("language" %in% names(df)) df$language else rep("en", nrow(df))
+      lang_col[is.na(lang_col) | !nzchar(lang_col)] <- "en"
+      all_results <- list()
+      batch_size  <- 50L
+
+      # withProgress обновляет прогресс-бар в браузере даже во время синхронного выполнения
+      shiny::withProgress(message = paste0("Задача: ", task_label), value = 0, {
+        processed <- 0L
+        for (lang in unique(lang_col)) {
+          group      <- df[lang_col == lang, , drop = FALSE]
+          model_name <- lang_mdls[[lang]] %||% NULL
+          if (is.null(model_name) || !nzchar(model_name)) {
+            ml_log_text(paste0("  Язык '", lang, "': нет модели в задаче, пропущено."))
+            next
+          }
+          if (length(available) > 0 && !model_name %in% available) {
+            ml_log_text(paste0("  Язык '", lang, "': модель '", model_name, "' не загружена, пропущено."))
+            next
+          }
+
+          n_batches <- ceiling(nrow(group) / batch_size)
+          for (b in seq_len(n_batches)) {
+            idx   <- seq((b - 1L) * batch_size + 1L, min(b * batch_size, nrow(group)))
+            batch <- group[idx, , drop = FALSE]
+
+            res <- tryCatch(
+              classify_with_ml(batch, model = model_name, ml_service_url = ml_service_url),
+              error = function(e) {
+                ml_log_text(paste0("  ERROR [", lang, " батч ", b, "]: ", conditionMessage(e)))
+                NULL
+              }
+            )
+            if (!is.null(res)) all_results[[paste0(lang, "_", b)]] <- res
+
+            processed <- processed + nrow(batch)
+            shiny::setProgress(
+              value   = processed / total,
+              detail  = paste0(processed, " / ", total, " статей")
+            )
+          }
+        }
+      })
+
+      if (length(all_results) == 0) {
+        ml_log_text("Нет результатов — проверь что нужные модели загружены в ML-сервис.")
+        return()
+      }
+
+      combined <- do.call(rbind, all_results)
+      upd <- update_ml_tags(combined, task_id = task_id)
+      ml_log_text(paste0("✓ Готово. Обновлено: ", upd$updated, " [", task_id, "]"))
+      reload_publications()
+    }
+
+    shiny::observeEvent(input$btn_ml_run,     run_ml_batch(only_new = TRUE))
+    shiny::observeEvent(input$btn_ml_run_all, run_ml_batch(only_new = FALSE))
+    output$ml_batch_status <- shiny::renderText({ ml_log_text() })
+
+    adhoc_result_data <- shiny::reactiveVal(NULL)
+
+    shiny::observeEvent(input$btn_adhoc, {
+      txt <- trimws(input$adhoc_text %||% "")
+      if (!nzchar(txt)) {
+        adhoc_result_data(list(error = "Пустой текст."))
+        return()
+      }
+
+      if (!ml_service_is_healthy(ml_service_url)) {
+        adhoc_result_data(list(error = paste0("ML-сервис недоступен: ", ml_service_url)))
+        return()
+      }
+
+      task_id   <- trimws(input$ml_task_adhoc %||% names(ml_task_choices)[1])
+      lang_sel  <- trimws(input$ml_adhoc_lang %||% "en")
+      model_sel <- (ml_tasks_info[[task_id]]$models)[[lang_sel]] %||% ""
+
+      if (!nzchar(model_sel)) {
+        adhoc_result_data(list(error = paste0(
+          "У задачи «", task_id, "» нет модели для языка «", lang_sel, "».",
+          " Проверь ml_tasks.yml и загруженные модели."
+        )))
+        return()
+      }
+
+      adhoc_result_data(list(loading = TRUE, model = model_sel))
+
+      res <- tryCatch({
+        req <- httr2::request(ml_service_url) |>
+          httr2::req_url_path("classify_single") |>
+          httr2::req_body_json(list(id = "adhoc", abstract = txt)) |>
+          httr2::req_url_query(model = model_sel) |>
+          httr2::req_timeout(30)
+        httr2::resp_body_json(httr2::req_perform(req))
+      }, error = function(e) list(error = conditionMessage(e)))
+
+      adhoc_result_data(res)
+    })
+
+    output$adhoc_result <- shiny::renderUI({
+      res <- adhoc_result_data()
+      if (is.null(res)) return(NULL)
+
+      if (isTRUE(res$loading))
+        return(shiny::div(class = "status-idle", paste0("Классификация моделью «", res$model, "»…")))
+
+      if (!is.null(res$error))
+        return(shiny::div(class = "status-fail",
+          shiny::strong("Ошибка: "), res$error))
+
+      conf_pct <- sprintf("%.1f%%", (res$confidence %||% 0) * 100)
+      shiny::div(
+        shiny::h5(paste0("Предсказание (модель: ", res$model_used %||% "default", "):")),
+        shiny::div(style = "font-size:22px;font-weight:700;color:#1e3a5f;",
+                   res$tag %||% "—"),
+        shiny::div(class = "status-idle", "Уверенность: ", conf_pct),
+        if (!is.null(res$all_scores)) {
+          top <- utils::head(sort(unlist(res$all_scores), decreasing = TRUE), 5)
+          shiny::tagList(
+            shiny::h6("Топ-5 классов:"),
+            shiny::tags$ul(lapply(names(top), function(k)
+              shiny::tags$li(k, ": ", sprintf("%.3f", top[[k]]))))
+          )
+        }
+      )
+    })
+
+    # ---- Аналитика ----
