@@ -1,0 +1,18 @@
+# ML classification tasks
+# Each task defines a label visible in the UI and models per language.
+# Language routing is automatic: papers are split by the 'language' column
+# and sent to the corresponding model. If a model for a language is absent
+# from the running service, those papers are skipped (ml_tag stays empty).
+# Add more tasks by appending entries below — no code changes required.
+
+default:
+  label: "Общая классификация"
+  models:
+    en: best_model
+    ru: russian
+
+malware:
+  label: "Детализация малвари"
+  models:
+    en: best_model_malware_fin
+    ru: malware_ru
