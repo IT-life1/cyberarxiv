@@ -1,0 +1,50 @@
+Package: cyberarxiv
+Title: arXiv Cybersecurity Publications ETL and Analytics
+Version: 0.1.0
+Authors@R: c(
+    person("Zvonov", "", role = "aut", email = "aleksandr.zwonov@yandex.ru"),
+    person("Kondrashkin", "", role = "aut", email = "alexkondrol@yandex.ru"),
+    person("Dolgov", "", role = "aut", email = "dolgov18012005@yandex.ru"),
+    person("Trembachev", "", role = "aut", email = "trembochev@yandex.ru"),
+    person("Mozgov", "", role = c("aut", "cre"), email = "IT-life1@yandex.com")
+    )
+Description: Collects arXiv papers related to cybersecurity, stores them locally,
+    enriches them with topic classification and ML-based tagging, and provides an
+    interactive Quarto dashboard for exploratory analysis. Includes MLflow integration
+    for serving a PyTorch-based classifier via HTTP API.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Imports:
+    arrow,
+    httr2,
+    xml2,
+    duckdb,
+    DBI,
+    dplyr,
+    tidytext,
+    stopwords,
+    stringr,
+    magrittr,
+    tibble,
+    plotly,
+    lubridate,
+    igraph,
+    tidyr,
+    ggplot2,
+    RColorBrewer,
+    httpuv,
+    quarto,
+    yaml,
+    jsonlite,
+    digest
+Suggests:
+    testthat (>= 3.0.0),
+    shiny,
+    DT,
+    rhandsontable
+Config/testthat/edition: 3
+Depends:
+    R (>= 4.3)
+LazyData: true

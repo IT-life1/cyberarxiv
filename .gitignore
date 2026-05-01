@@ -1,0 +1,47 @@
+# Data & Models
+models/*.pt
+data/*.csv
+data/arxiv_security_chunks/
+raw-data/*.rds
+
+# MLflow
+mlflow/
+
+# Checkpoints
+check_points/*.pt
+
+# R
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+renv/library/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Docker volumes
+*.duckdb
+
+# Training pipeline artifacts
+training_data/raw/*
+training_data/labeled/*
+training_data/excel/*
+training_data/jobs/*
+training_data/training_csv/*
+training_data/config/*
+!training_data/**/.gitkeep
+
+# Site (generated)
+site/dashboard.html
+
+# OS
+.DS_Store
+Thumbs.db
+
+/.quarto/
+**/*.quarto_ipynb
