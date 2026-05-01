@@ -398,3 +398,210 @@ launch_app <- function(host = "0.0.0.0",
                 shiny::br(), shiny::br(),
                 shiny::verbatimTextOutput("tr_collect_status"),
                 shiny::uiOutput("tr_collect_progress")
+              ),
+              shiny::column(8,
+                shiny::h4("Лог"),
+                shiny::div(class = "log-area", shiny::verbatimTextOutput("tr_collect_log")),
+                shiny::br(),
+                shiny::h4("Сохранённые сырые выборки"),
+                shiny::actionButton("btn_tr_files_raw_refresh", "\U0001F504",
+                                    class = "btn-info btn-sm"),
+                DT::DTOutput("tr_files_raw")
+              )
+            )
+          ),
+
+          # ---------- 6.3 Разметка LLM ----------
+          shiny::tabPanel("\U0001F916 Разметка LLM",
+            shiny::br(),
+            shiny::fluidRow(
+              shiny::column(4,
+                shiny::h4("Параметры"),
+                shiny::uiOutput("ui_tr_label_raw_pick"),
+                shiny::numericInput("tr_label_max_rows",
+                                    "Сколько строк размечать (0 = все):",
+                                    value = 0, min = 0, max = 1000000, step = 100),
+                shiny::actionButton("btn_tr_label", "▶ Запустить LLM",
+                                    class = "btn-success btn-lg"),
+                shiny::actionButton("btn_tr_label_cancel", "⏹ Отмена",
+                                    class = "btn-warning"),
+                shiny::br(), shiny::br(),
+                shiny::verbatimTextOutput("tr_label_status"),
+                shiny::uiOutput("tr_label_progress")
+              ),
+              shiny::column(8,
+                shiny::h4("Лог разметки"),
+                shiny::div(class = "log-area", shiny::verbatimTextOutput("tr_label_log")),
+                shiny::br(),
+                shiny::h4("Размеченные выборки"),
+                shiny::actionButton("btn_tr_files_labeled_refresh", "\U0001F504",
+                                    class = "btn-info btn-sm"),
+                DT::DTOutput("tr_files_labeled")
+              )
+            )
+          ),
+
+          # ---------- 6.4 Excel ----------
+          shiny::tabPanel("\U0001F4D2 Excel",
+            shiny::br(),
+            shiny::fluidRow(
+              shiny::column(4,
+                shiny::h4("Экспорт в Excel"),
+                shiny::uiOutput("ui_tr_excel_labeled_pick"),
+                shiny::numericInput("tr_excel_max_rows",
+                                    "Макс. строк в Excel (0 = все):",
+                                    value = 0, min = 0, max = 1000000, step = 1000),
+                shiny::actionButton("btn_tr_export_excel", "▶ Экспорт",
+                                    class = "btn-success"),
+                shiny::br(), shiny::br(),
+                shiny::verbatimTextOutput("tr_excel_status")
+              ),
+              shiny::column(8,
+                shiny::h4("Готовые .xlsx"),
+                shiny::actionButton("btn_tr_files_excel_refresh", "\U0001F504",
+                                    class = "btn-info btn-sm"),
+                DT::DTOutput("tr_files_excel"),
+                shiny::helpText(
+                  "Файлы лежат в training_data/excel/. ",
+                  "Можно отредактировать вручную (исправить метки) и подать на обучение."
+                )
+              )
+            )
+          ),
+
+          # ---------- 6.5 Обучение ----------
+          shiny::tabPanel("\U0001F525 Обучение",
+            shiny::br(),
+            shiny::fluidRow(
+              shiny::column(4,
+                shiny::h4("Гиперпараметры"),
+                shiny::uiOutput("ui_tr_train_excel_pick"),
+                shiny::textInput("tr_train_model_name",
+                                 "Имя выходной модели (без .pt):",
+                                 value = "custom_model"),
+                shiny::textInput("tr_train_base_model",
+                                 "Базовая HuggingFace-модель:",
+                                 value = "distilbert-base-uncased"),
+                shiny::numericInput("tr_train_epochs", "epochs:", value = 8,
+                                    min = 1, max = 200, step = 1),
+                shiny::numericInput("tr_train_batch_size", "batch_size:", value = 16,
+                                    min = 1, max = 256, step = 1),
+                shiny::numericInput("tr_train_lr", "learning rate:", value = 2e-5,
+                                    min = 1e-7, max = 1, step = 1e-6),
+                shiny::numericInput("tr_train_max_length", "max_length:", value = 256,
+                                    min = 32, max = 1024, step = 32),
+                shiny::numericInput("tr_train_test_size", "test_size:", value = 0.1,
+                                    min = 0.01, max = 0.4, step = 0.01),
+                shiny::numericInput("tr_train_val_size", "val_size:", value = 0.1,
+                                    min = 0.01, max = 0.4, step = 0.01),
+                shiny::textInput("tr_train_mlflow_uri", "MLflow tracking URI:",
+                                 value = Sys.getenv("MLFLOW_TRACKING_URI",
+                                                    "http://localhost:5000"),
+                                 placeholder = "http://localhost:5000"),
+                shiny::helpText(
+                  "Подсказка: train_test_split дропает классы, в которых меньше",
+                  " ceil(1/(test+val)) + 1 примеров. Дефолт 0.1+0.1 → нужно ≥ 6 ",
+                  "статей на класс. Для маленьких выборок понизьте обе доли ",
+                  "(0.05+0.05 → ≥ 11 на класс не нужно)."),
+                shiny::actionButton("btn_tr_train", "▶ Старт обучения",
+                                    class = "btn-success btn-lg"),
+                shiny::actionButton("btn_tr_train_cancel", "⏹ Отмена",
+                                    class = "btn-warning"),
+                shiny::br(), shiny::br(),
+                shiny::verbatimTextOutput("tr_train_status"),
+                shiny::uiOutput("tr_train_progress")
+              ),
+              shiny::column(8,
+                shiny::h4("Лог обучения"),
+                shiny::div(class = "log-area", shiny::verbatimTextOutput("tr_train_log")),
+                shiny::br(),
+                shiny::h4("MLflow"),
+                shiny::uiOutput("tr_mlflow_link"),
+                shiny::br(),
+                shiny::actionButton("btn_tr_reload_models", "\U0001F501 Reload models",
+                                    class = "btn-primary"),
+                shiny::helpText("Обновляет список моделей в инференс-сервисе после обучения."),
+                shiny::br(),
+                shiny::verbatimTextOutput("tr_reload_status"),
+                shiny::hr(),
+                shiny::h4("Зарегистрировать как ML-задачу"),
+                shiny::helpText(
+                  "Добавляет обученную модель в дропдауны \U201CЗадача\U201D на ",
+                  "вкладках ML-классификатор и ETL. Имя модели берётся из ",
+                  "«", "Имя выходной модели", "» выше."),
+                shiny::textInput("tr_register_task_name",
+                                 "Идентификатор задачи (snake_case):",
+                                 value = "", placeholder = "my_grok_task"),
+                shiny::textInput("tr_register_task_label",
+                                 "Отображаемое название:",
+                                 value = "", placeholder = "Моя модель (Grok)"),
+                shiny::selectInput("tr_register_task_lang",
+                                   "Язык:",
+                                   choices = c("Английский" = "en",
+                                               "Русский" = "ru"),
+                                   selected = "en"),
+                shiny::actionButton("btn_tr_register_task",
+                                    "\U0001F4DD Зарегистрировать",
+                                    class = "btn-primary"),
+                shiny::br(), shiny::br(),
+                shiny::verbatimTextOutput("tr_register_status")
+              )
+            )
+          ),
+
+          # ---------- 6.6 Все джобы ----------
+          shiny::tabPanel("\U0001F4DC Джобы",
+            shiny::br(),
+            shiny::actionButton("btn_tr_jobs_refresh", "\U0001F504 Обновить",
+                                class = "btn-info"),
+            shiny::br(), shiny::br(),
+            DT::DTOutput("tr_jobs_table"),
+            shiny::br(),
+            shiny::h4("Лог выбранного джоба"),
+            shiny::helpText("Нажмите на строку таблицы, чтобы увидеть полный лог."),
+            shiny::div(class = "log-area", shiny::verbatimTextOutput("tr_job_log_detail"))
+          )
+        )
+      ),
+
+      # ---- 7. Настройки ----
+      shiny::tabPanel(title = "⚙ Настройки",
+        shiny::br(),
+        shiny::h4("Окружение"),
+        shiny::verbatimTextOutput("settings_info"),
+        shiny::br(),
+        shiny::h4("Действия"),
+        shiny::actionButton("btn_reinit_db", "⚠ Переинициализировать схему БД",
+                            class = "btn-warning"),
+        shiny::helpText("Создаст таблицы и добавит недостающие колонки. Данные не удалит."),
+        shiny::br(), shiny::br(),
+        shiny::verbatimTextOutput("settings_log"),
+        shiny::hr(),
+        shiny::h4("Удаление статей"),
+        shiny::fluidRow(
+          shiny::column(4,
+            shiny::selectizeInput("del_tags", "По keyword-тегу:",
+                                  choices = c(), multiple = TRUE,
+                                  options = list(placeholder = "выберите один или несколько"))
+          ),
+          shiny::column(3,
+            shiny::selectInput("del_source", "По источнику:",
+                               choices = c("Все источники" = ""), selected = "")
+          ),
+          shiny::column(2,
+            shiny::br(),
+            shiny::actionButton("btn_delete_articles", "\U26A0 Удалить",
+                                class = "btn-danger")
+          ),
+          shiny::column(3,
+            shiny::br(),
+            shiny::textOutput("del_preview")
+          )
+        ),
+        shiny::verbatimTextOutput("del_status")
+      )
+    )
+  )
+}
+
+# ============================================================
