@@ -1,0 +1,58 @@
+name: arxiv
+label: "arXiv (cs.CR, cs.NI, cs.LG)"
+type: atom
+enabled: true
+id_prefix: ""
+language: en
+
+url: "https://export.arxiv.org/api/query"
+
+params:
+  search_query: "(cat:cs.CR OR cat:cs.NI OR cat:cs.LG) AND all:(malware OR intrusion OR attack OR threat OR adversary OR botnet OR exploit OR trojan OR phishing)"
+  sortBy: submittedDate
+  sortOrder: descending
+
+pagination:
+  type: offset
+  start_param: start
+  size_param: max_results
+  page_size: 100
+
+rate_limit_secs: 0.3
+retry: 3
+
+namespace: "http://www.w3.org/2005/Atom"
+item_xpath: ".//atom:entry"
+
+fields:
+  id:
+    xpath: "./atom:id"
+    multi: false
+  title:
+    xpath: "./atom:title"
+    multi: false
+  abstract:
+    xpath: "./atom:summary"
+    multi: false
+  link:
+    xpath: "./atom:id"
+    multi: false
+  published_date:
+    xpath: "./atom:published"
+    multi: false
+  updated_date:
+    xpath: "./atom:updated"
+    multi: false
+  authors:
+    xpath: "./atom:author/atom:name"
+    multi: true
+    join: "; "
+  categories:
+    xpath: "./atom:category"
+    attr: "term"
+    multi: true
+    join: "; "
+
+transforms:
+  id: strip_arxiv_id
+  categories: map_arxiv_categories

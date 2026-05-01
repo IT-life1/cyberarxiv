@@ -1,0 +1,34 @@
+name: core
+label: "CORE — Open Access Research (Cybersecurity)"
+type: core_api
+enabled: true
+id_prefix: "core:"
+language: en
+
+url: "https://api.core.ac.uk/v3/search/works/"
+
+# API key — either inline here or via environment variable CORE_API_KEY.
+# Register for a free key at https://core.ac.uk/services/api
+api_key: "Yf9IRiK7dVrQvAWDJtoyHm1zl3Pu8cTN"
+
+# Full-text search query sent to CORE API
+query: "cybersecurity OR malware OR phishing OR ransomware OR vulnerability OR cryptography OR exploit OR intrusion OR botnet OR firewall"
+
+page_size: 10
+rate_limit_secs: 1.0
+retry: 3
+
+filter_keywords:
+  - cybersecurity
+  - cyber security
+  - information security
+  - network security
+  - malware
+  - vulnerability
+  - intrusion detection
+  - cryptography
+  - phishing
+  - ransomware
+  - exploit
+  - threat intelligence
+  - anomaly detection

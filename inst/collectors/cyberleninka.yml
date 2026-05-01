@@ -1,0 +1,16 @@
+name: cyberleninka
+label: "КиберЛенинка — Вопросы кибербезопасности"
+type: oai_pmh
+enabled: true
+id_prefix: "cyberleninka:"
+language: ru
+
+url: "https://cyberleninka.ru/oai"
+
+oai:
+  metadata_prefix: oai_dc
+  set: "journal_32131"
+
+page_size: 100
+rate_limit_secs: 1.0
+retry: 3
