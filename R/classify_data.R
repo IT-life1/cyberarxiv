@@ -410,7 +410,7 @@ classify_data <- function(data, keywords_file = NULL) {
 #' Pipeline that fetches papers from configured collectors, classifies them,
 #' and updates the database.
 #'
-#' Follows the pattern: fetch -> RDS -> DB (raw) -> classify -> update tags in DB.
+#' Follows the pattern: fetch -> DB (raw) -> classify -> update tags in DB.
 #' Papers are persisted before classification, so a classifier failure never causes data loss.
 #'
 #' @param max_results How many papers to fetch per source (integer). When `only_new = TRUE`,
@@ -438,29 +438,21 @@ etl <- function(max_results = 100, only_new = FALSE, db_path = NULL,
       message("No papers fetched.")
       return(invisible(list(inserted = 0L, updated = 0L, skipped = 0L)))
     }
-    save_raw_data(papers)
   } else {
-    all_new <- .fetch_only_new_multi(sources, max_results, db_path,
-                                     collectors_dir, param_overrides)
-    if (is.null(all_new)) {
+    papers <- .fetch_only_new_multi(sources, max_results, db_path,
+                                    collectors_dir, param_overrides)
+    if (is.null(papers)) {
       return(invisible(list(inserted = 0L, updated = 0L, skipped = 0L)))
     }
-    save_raw_data(all_new)
   }
 
-  raw <- load_raw_data()
-  if (nrow(raw) == 0L) {
-    message("No papers to process.")
-    return(invisible(list(inserted = 0L, updated = 0L, skipped = 0L)))
-  }
-
-  raw$tag <- ""
-  if (!"language" %in% names(raw)) raw$language <- NA_character_
-  message("Saving ", nrow(raw), " paper(s) to DB...")
-  result <- save_publications(raw, db_path = db_path)
+  papers$tag <- ""
+  if (!"language" %in% names(papers)) papers$language <- NA_character_
+  message("Saving ", nrow(papers), " paper(s) to DB...")
+  result <- save_publications(papers, db_path = db_path)
 
   message("Classifying...")
-  classified <- .classify_by_lang(raw, keywords_file)
+  classified <- .classify_by_lang(papers, keywords_file)
   .update_tags(classified, db_path = db_path)
 
   message("Done: inserted=", result$inserted, ", updated=", result$updated,
