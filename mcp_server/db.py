@@ -29,7 +29,7 @@ def search_papers(
     try:
         sql = """
             SELECT paper_id, link, title, authors, abstract, categories,
-                   published_date, updated_date, tag, ml_tag, ml_confidence,
+                   published_date, updated_date, tag, ml_results,
                    source, language
             FROM papers
             WHERE 1=1
@@ -57,7 +57,7 @@ def search_papers(
         rows = con.execute(sql, params).fetchall()
         cols = [
             "paper_id", "link", "title", "authors", "abstract", "categories",
-            "published_date", "updated_date", "tag", "ml_tag", "ml_confidence",
+            "published_date", "updated_date", "tag", "ml_results",
             "source", "language",
         ]
         return [dict(zip(cols, row)) for row in rows]
@@ -76,7 +76,7 @@ def get_paper(db_path: Optional[str], paper_id: str) -> Optional[dict]:
         rows = con.execute(
             """
             SELECT paper_id, link, title, authors, abstract, categories,
-                   published_date, updated_date, tag, ml_tag, ml_confidence,
+                   published_date, updated_date, tag, ml_results,
                    source, language
             FROM papers WHERE paper_id = ?
             """,
@@ -86,7 +86,7 @@ def get_paper(db_path: Optional[str], paper_id: str) -> Optional[dict]:
             return None
         cols = [
             "paper_id", "link", "title", "authors", "abstract", "categories",
-            "published_date", "updated_date", "tag", "ml_tag", "ml_confidence",
+            "published_date", "updated_date", "tag", "ml_results",
             "source", "language",
         ]
         return dict(zip(cols, rows[0]))
@@ -160,7 +160,7 @@ def get_categories(db_path: Optional[str] = None) -> list[str]:
 
 
 def get_unclassified_papers(db_path: Optional[str], limit: int = 100) -> list[dict]:
-    """Return papers without ml_tag, for batch ML classification."""
+    """Return papers without ML results, for batch ML classification."""
     if db_path is None:
         db_path = _db_path()
     if not os.path.exists(db_path):
@@ -170,7 +170,9 @@ def get_unclassified_papers(db_path: Optional[str], limit: int = 100) -> list[di
     try:
         rows = con.execute(
             "SELECT paper_id, abstract, language FROM papers "
-            "WHERE ml_tag IS NULL AND abstract IS NOT NULL AND abstract != '' "
+            "WHERE (ml_results IS NULL "
+            "   OR json_extract_string(ml_results, '$.default.tag') IS NULL) "
+            "AND abstract IS NOT NULL AND abstract != '' "
             "ORDER BY updated_date DESC NULLS LAST LIMIT ?",
             [limit],
         ).fetchall()
@@ -180,7 +182,7 @@ def get_unclassified_papers(db_path: Optional[str], limit: int = 100) -> list[di
 
 
 def update_ml_tags(db_path: Optional[str], results: list[dict]) -> int:
-    """Write ML classification results back to DuckDB. Returns number of updated rows."""
+    """Write ML classification results back to DuckDB as JSON. Returns number of updated rows."""
     if db_path is None:
         db_path = _db_path()
     if not results:
@@ -191,7 +193,17 @@ def update_ml_tags(db_path: Optional[str], results: list[dict]) -> int:
         updated = 0
         for r in results:
             con.execute(
-                "UPDATE papers SET ml_tag = ?, ml_confidence = ? WHERE paper_id = ?",
+                """
+                UPDATE papers
+                SET ml_results = json_merge_patch(
+                    COALESCE(ml_results, '{}'),
+                    json_object('default', json_object(
+                        'tag', ?,
+                        'confidence', CAST(? AS DOUBLE)
+                    ))
+                )
+                WHERE paper_id = ?
+                """,
                 [r["tag"], r["confidence"], r["paper_id"]],
             )
             updated += 1
