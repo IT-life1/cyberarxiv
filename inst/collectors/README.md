@@ -25,7 +25,7 @@ id_prefix: "myatom:"
 ```yaml
 name: source_name          # required: unique identifier used as 'source' in DB
 label: "Human Name"        # optional: shown in list_collectors() (default: name)
-type: rss                  # required: rss | atom | oai_pmh | r_script
+type: rss                  # required: rss | atom | oai_pmh | json_api | r_script
 enabled: true              # optional: set false to skip (default: true)
 id_prefix: "prefix:"      # optional: prepended to every ID for global uniqueness
 
@@ -107,6 +107,66 @@ collect <- function(max_results = 100, ...) {
 }
 ```
 
+## JSON API collector (type: json_api)
+
+Generic REST JSON API collector. Configure everything in YAML — no R code needed.
+
+```yaml
+name: my_api_source
+type: json_api
+id_prefix: "myapi:"
+base_url: "https://api.example.com/v1"
+endpoint: "/articles"
+
+auth:
+  type: bearer             # bearer | header | query_param
+  token: "YOUR_API_KEY"
+  # header_name: "X-API-Key"  # for type: header
+  # param_name: "apikey"      # for type: query_param
+
+pagination:
+  type: offset             # offset | cursor | page
+  limit_param: "limit"
+  offset_param: "offset"
+  page_size: 20
+  # skip_zero_offset: true # set true if API rejects offset=0
+  # cursor_path: "meta.next"  # for type: cursor
+  # cursor_param: "cursor"    # for type: cursor
+  # page_param: "page"        # for type: page
+  # start_page: 1             # for type: page
+
+rate_limit_secs: 1.0
+
+query:
+  params:
+    q: "search terms"
+    sort: "date"
+
+response:
+  results_path: "data.articles"  # dot-path to results array
+  total_path: "meta.total"       # dot-path to total count (optional)
+
+field_map:
+  id: "article_id"
+  title: "title"
+  abstract: "summary"
+  link: "url"
+  authors: "contributors[].name"  # array of objects -> join with ", "
+  published_date: "pub_date"
+  categories: "tags[]"            # array of scalars -> join with ", "
+```
+
+### Field mapping syntax
+
+| Pattern | Meaning | Example |
+|---------|---------|---------|
+| `"field"` | Top-level field | `"title"` |
+| `"a.b.c"` | Nested field | `"meta.pub_date"` |
+| `"arr[].field"` | Array of objects, extract field, join with `, ` | `"authors[].name"` |
+| `"arr[]"` | Array of scalars, join with `, ` | `"tags[]"` |
+
+If a field is not found in the response, the value is set to `NA` (not an error).
+
 ## Discovery order
 
 1. Built-in: `inst/collectors/` (package defaults)
@@ -159,11 +219,11 @@ silently truncated. Split into multiple date-ranged queries if you need more.
 **Problem:** `403 Forbidden` after many requests.
 arXiv rate-limits aggressive crawlers. Set `rate_limit_secs: 3` or higher.
 
-### CORE (type: core_api)
+### CORE (type: json_api)
 
 **Problem:** `HTTP 500` when adding `offset=0`.
-CORE REST API v3 free tier rejects `offset=0`. The collector omits it automatically
-(`page_size: 10`, no offset). Do not add `offset` to `params:`.
+CORE REST API v3 free tier rejects `offset=0`. Set `skip_zero_offset: true` in
+the `pagination:` section of the YAML. The built-in `core.yml` already does this.
 
 **Problem:** Fewer than `page_size` results despite many matching papers.
 CORE uses Elasticsearch under the hood; the free tier caps at 10 per request and
@@ -171,7 +231,7 @@ total result sets are often smaller than the `totalHits` counter suggests.
 CORE is best used as a supplemental source, not primary.
 
 **Problem:** `401 Unauthorized`.
-The `api_key` in `core.yml` has expired or is incorrect. Generate a new key at
+The `auth.token` in `core.yml` has expired or is incorrect. Generate a new key at
 `https://core.ac.uk/` and update `core.yml`.
 
 ### КиберЛенинка (type: oai_pmh)
