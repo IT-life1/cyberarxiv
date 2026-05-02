@@ -45,7 +45,7 @@
     stop("Collector spec '", basename(path), "' is missing required field(s): ",
          paste(missing_fields, collapse = ", "))
 
-  valid_types <- c("atom", "rss", "oai_pmh", "core_api", "r_script")
+  valid_types <- c("atom", "rss", "oai_pmh", "json_api", "r_script")
   if (!spec$type %in% valid_types)
     stop("Collector '", spec$name, "': unknown type '", spec$type, "'. ",
          "Must be one of: ", paste(valid_types, collapse = ", "))
@@ -179,7 +179,7 @@ collect_all <- function(sources = NULL, max_results = 100L, extra_dirs = NULL,
     atom     = .fetch_atom_feed(spec, max_results),
     rss      = .fetch_rss_feed(spec, max_results),
     oai_pmh  = .fetch_oai_pmh(spec, max_results),
-    core_api = .fetch_core_api(spec, max_results),
+    json_api = .fetch_json_api(spec, max_results),
     r_script = .run_r_script_collector(spec, max_results),
     stop("Unknown collector type: '", spec$type, "'")
   )
