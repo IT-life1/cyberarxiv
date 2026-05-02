@@ -50,6 +50,7 @@ launch_app <- function(host = "0.0.0.0",
       shiny::tags$strong("CyberArXiv"),
       shiny::tags$small(style = "opacity:0.7; margin-left:8px;", "ML Paper Analytics")
     ),
+    id = "main_nav",
     theme = bslib::bs_theme(
       version = 5,
       preset = "shiny",
@@ -62,6 +63,7 @@ launch_app <- function(host = "0.0.0.0",
     header = shiny::tags$head(
       shiny::tags$link(rel = "stylesheet", href = "cyberarxiv-static/style.css")
     ),
+    fillable = FALSE,
     bg = "#1b1f2b",
     inverse = TRUE,
 

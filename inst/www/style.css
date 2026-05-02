@@ -1,10 +1,6 @@
 /* CyberArXiv UI Theme — inspired by MLflow/modern dashboards */
 
 :root {
-  --sidebar-bg: #1b1f2b;
-  --sidebar-fg: #c8cdd8;
-  --sidebar-active: #6366f1;
-  --sidebar-hover: rgba(99, 102, 241, 0.12);
   --body-bg: #f4f5f7;
   --card-bg: #ffffff;
   --card-border: #e5e7eb;
@@ -29,41 +25,6 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
   font-size: 14px;
   line-height: 1.5;
-}
-
-/* ---- Sidebar overrides ---- */
-.bslib-sidebar-layout > .sidebar {
-  background: var(--sidebar-bg) !important;
-  border-right: none !important;
-}
-
-.bslib-sidebar-layout > .sidebar .nav-link {
-  color: var(--sidebar-fg) !important;
-  border-radius: 6px;
-  margin: 2px 8px;
-  padding: 10px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.15s ease;
-}
-
-.bslib-sidebar-layout > .sidebar .nav-link:hover {
-  background: var(--sidebar-hover) !important;
-  color: #fff !important;
-}
-
-.bslib-sidebar-layout > .sidebar .nav-link.active {
-  background: var(--sidebar-active) !important;
-  color: #fff !important;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-}
-
-.bslib-sidebar-layout > .sidebar .sidebar-title {
-  color: #fff;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  padding: 16px 16px 8px;
 }
 
 /* ---- Cards ---- */
@@ -293,8 +254,5 @@ table.dataTable tbody tr:hover {
 @media (max-width: 768px) {
   .metric-card .metric-value {
     font-size: 24px;
-  }
-  .bslib-sidebar-layout > .sidebar {
-    min-width: 200px !important;
   }
 }
