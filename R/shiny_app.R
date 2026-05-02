@@ -876,7 +876,7 @@ launch_app <- function(host = "0.0.0.0",
           if (ml_service_is_healthy(ml_service_url)) {
             task_label <- ml_tasks_info[[task_id]]$label %||% task_id
             append_log(paste0("ML-классификация [задача: ", task_label, "]..."))
-            raw <- tryCatch(load_raw_data(), error = function(e) NULL)
+            raw <- tryCatch(load_publications(), error = function(e) NULL)
             if (!is.null(raw) && nrow(raw) > 0) {
               available <- tryCatch(
                 names(list_ml_models(ml_service_url)$models),
