@@ -29,7 +29,7 @@ launch_app <- function(host = "0.0.0.0",
   # Serve static assets from inst/www
   www_dir <- system.file("www", package = "cyberarxiv")
   if (!nzchar(www_dir)) www_dir <- "inst/www"
-  shiny::addResourcePath("", www_dir)
+  shiny::addResourcePath("cyberarxiv-static", www_dir)
 
   ui     <- .build_ui(init_choices)
   server <- .build_server(ml_service_url, init_tasks, init_choices)
@@ -62,7 +62,7 @@ launch_app <- function(host = "0.0.0.0",
       "sidebar-fg" = "#c8cdd8"
     ),
     tags = shiny::tags$head(
-      shiny::tags$link(rel = "stylesheet", href = "style.css"),
+      shiny::tags$link(rel = "stylesheet", href = "cyberarxiv-static/style.css"),
       shiny::tags$script(shiny::HTML("
         $(document).on('click', '.sidebar .nav-link[data-bs-toggle=\"pill\"]', function(e) {
           e.preventDefault();
