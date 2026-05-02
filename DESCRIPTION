@@ -41,6 +41,7 @@ Imports:
 Suggests:
     testthat (>= 3.0.0),
     shiny,
+    bslib (>= 0.6.0),
     DT,
     rhandsontable
 Config/testthat/edition: 3

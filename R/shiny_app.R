@@ -11,7 +11,7 @@ launch_app <- function(host = "0.0.0.0",
                        launch_browser = interactive()) {
 
   need <- c("shiny", "DT", "plotly", "dplyr", "tibble", "lubridate", "stringr",
-            "rhandsontable", "httr2")
+            "rhandsontable", "httr2", "bslib")
   missing_pkgs <- need[!vapply(need, requireNamespace, logical(1), quietly = TRUE)]
   if (length(missing_pkgs))
     stop("Нужны пакеты: ", paste(missing_pkgs, collapse = ", "), call. = FALSE)
@@ -25,6 +25,11 @@ launch_app <- function(host = "0.0.0.0",
   ))
   init_choices <- setNames(names(init_tasks),
                            vapply(init_tasks, `[[`, character(1), "label"))
+
+  # Serve static assets from inst/www
+  www_dir <- system.file("www", package = "cyberarxiv")
+  if (!nzchar(www_dir)) www_dir <- "inst/www"
+  shiny::addResourcePath("", www_dir)
 
   ui     <- .build_ui(init_choices)
   server <- .build_server(ml_service_url, init_tasks, init_choices)
@@ -40,566 +45,572 @@ launch_app <- function(host = "0.0.0.0",
 
 #' @noRd
 .build_ui <- function(ml_task_choices = c("Общая классификация" = "default")) {
-  shiny::fluidPage(
-    title = "CyberArXiv — GUI",
-    shiny::tags$head(shiny::tags$style(shiny::HTML("
-      body { background: #f7f7fa; }
-      .header-bar {
-        background: linear-gradient(90deg, #1e3a5f 0%, #2c5282 100%);
-        color: white; padding: 16px 24px; margin-bottom: 18px;
-        border-radius: 0 0 6px 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-      }
-      .header-bar h1 { margin: 0; font-size: 22px; font-weight: 600; }
-      .header-bar .subtitle { font-size: 13px; opacity: 0.85; margin-top: 4px; }
-      .status-ok   { color: #2e7d32; font-weight: 600; }
-      .status-fail { color: #c62828; font-weight: 600; }
-      .status-idle { color: #757575; }
-      .metric-box {
-        background: white; padding: 16px; border-radius: 6px;
-        border-left: 4px solid #2c5282; margin-bottom: 12px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-      }
-      .metric-box .metric-label { font-size: 12px; color: #666; text-transform: uppercase; }
-      .metric-box .metric-value { font-size: 26px; font-weight: 700; color: #1e3a5f; }
-      .log-area {
-        background: #1e1e1e; color: #d4d4d4; padding: 12px;
-        font-family: 'Courier New', monospace; font-size: 12px;
-        border-radius: 4px; max-height: 320px; overflow-y: auto; white-space: pre-wrap;
-      }
-    "))),
+  css_path <- system.file("www/style.css", package = "cyberarxiv")
+  if (!nzchar(css_path)) css_path <- "inst/www/style.css"
 
-    shiny::div(class = "header-bar",
-      shiny::h1("CyberArXiv — сбор и классификация статей"),
-      shiny::div(class = "subtitle",
-        "Multi-source ETL · DuckDB · Keyword + ML classifier store")
+  bslib::page_sidebar(
+    title = "CyberArXiv",
+    theme = bslib::bs_theme(
+      version = 5,
+      preset = "shiny",
+      bg = "#f4f5f7", fg = "#111827",
+      primary = "#4f46e5", success = "#059669",
+      warning = "#d97706", danger = "#dc2626",
+      base_font = bslib::font_google("Inter"),
+      code_font = bslib::font_google("JetBrains Mono"),
+      "sidebar-bg" = "#1b1f2b",
+      "sidebar-fg" = "#c8cdd8"
+    ),
+    tags = shiny::tags$head(
+      shiny::tags$link(rel = "stylesheet", href = "style.css"),
+      shiny::tags$script(shiny::HTML("
+        $(document).on('click', '.sidebar .nav-link[data-bs-toggle=\"pill\"]', function(e) {
+          e.preventDefault();
+          var target = $(this).attr('href').replace('#', '');
+          Shiny.setInputValue('sidebar_nav', target, {priority: 'event'});
+          $(this).closest('.nav').find('.nav-link').removeClass('active');
+          $(this).addClass('active');
+        });
+      "))
+    ),
+    sidebar = bslib::sidebar(
+      title = shiny::tags$span(
+        shiny::tags$strong("CyberArXiv"),
+        shiny::tags$br(),
+        shiny::tags$small(style = "opacity:0.7;font-weight:400;", "ML Paper Analytics")
+      ),
+      width = 220,
+      shiny::tags$nav(class = "nav nav-pills flex-column mt-2",
+        shiny::tags$a(class = "nav-link active", `data-bs-toggle` = "pill",
+                      href = "#tab_overview", "Overview"),
+        shiny::tags$a(class = "nav-link", `data-bs-toggle` = "pill",
+                      href = "#tab_etl", "ETL Pipeline"),
+        shiny::tags$a(class = "nav-link", `data-bs-toggle` = "pill",
+                      href = "#tab_papers", "Papers"),
+        shiny::tags$a(class = "nav-link", `data-bs-toggle` = "pill",
+                      href = "#tab_ml", "ML Classifier"),
+        shiny::tags$a(class = "nav-link", `data-bs-toggle` = "pill",
+                      href = "#tab_analytics", "Analytics"),
+        shiny::tags$a(class = "nav-link", `data-bs-toggle` = "pill",
+                      href = "#tab_training", "Training"),
+        shiny::tags$a(class = "nav-link", `data-bs-toggle` = "pill",
+                      href = "#tab_settings", "Settings")
+      )
     ),
 
-    shiny::tabsetPanel(id = "main_tabs", type = "tabs",
+    shiny::tabsetPanel(id = "main_tabs", type = "hidden",
 
-      # ---- 1. Обзор ----
-      shiny::tabPanel(title = "\U0001F4CA Обзор",
-        shiny::br(),
+      # ---- 1. Overview ----
+      shiny::tabPanelBody(value = "tab_overview",
         shiny::fluidRow(
-          shiny::column(3, shiny::div(class = "metric-box",
-            shiny::div(class = "metric-label", "Всего статей"),
-            shiny::div(class = "metric-value", shiny::textOutput("m_total", inline = TRUE))
+          shiny::column(3, shiny::div(class = "metric-card",
+            shiny::div(class = "metric-value", shiny::textOutput("m_total", inline = TRUE)),
+            shiny::div(class = "metric-label", "Total papers")
           )),
-          shiny::column(3, shiny::div(class = "metric-box",
-            shiny::div(class = "metric-label", "С ML-меткой"),
-            shiny::div(class = "metric-value", shiny::textOutput("m_ml", inline = TRUE))
+          shiny::column(3, shiny::div(class = "metric-card",
+            shiny::div(class = "metric-value", shiny::textOutput("m_ml", inline = TRUE)),
+            shiny::div(class = "metric-label", "ML classified")
           )),
-          shiny::column(3, shiny::div(class = "metric-box",
-            shiny::div(class = "metric-label", "Источников"),
-            shiny::div(class = "metric-value", shiny::textOutput("m_sources", inline = TRUE))
+          shiny::column(3, shiny::div(class = "metric-card",
+            shiny::div(class = "metric-value", shiny::textOutput("m_sources", inline = TRUE)),
+            shiny::div(class = "metric-label", "Sources")
           )),
-          shiny::column(3, shiny::div(class = "metric-box",
-            shiny::div(class = "metric-label", "ML-сервис"),
-            shiny::div(class = "metric-value", shiny::uiOutput("m_ml_status"))
+          shiny::column(3, shiny::div(class = "metric-card",
+            shiny::div(class = "metric-value", shiny::uiOutput("m_ml_status")),
+            shiny::div(class = "metric-label", "ML service")
           ))
         ),
-        shiny::br(),
-        shiny::fluidRow(
-          shiny::column(4,
-            shiny::h4("По источникам"),
-            plotly::plotlyOutput("plot_sources", height = "300px")
-          ),
-          shiny::column(4,
-            shiny::h4("По тегам (keyword)"),
-            plotly::plotlyOutput("plot_tags", height = "300px")
-          ),
-          shiny::column(4,
-            shiny::h4("Публикации по месяцам"),
-            plotly::plotlyOutput("plot_month", height = "300px")
+        shiny::tags$div(style = "margin-top:24px;",
+          shiny::fluidRow(
+            shiny::column(4,
+              bslib::card(
+                bslib::card_header("By source"),
+                bslib::card_body(plotly::plotlyOutput("plot_sources", height = "280px"))
+              )
+            ),
+            shiny::column(4,
+              bslib::card(
+                bslib::card_header("By keyword tag"),
+                bslib::card_body(plotly::plotlyOutput("plot_tags", height = "280px"))
+              )
+            ),
+            shiny::column(4,
+              bslib::card(
+                bslib::card_header("Monthly publications"),
+                bslib::card_body(plotly::plotlyOutput("plot_month", height = "280px"))
+              )
+            )
           )
         ),
-        shiny::br(),
-        shiny::actionButton("btn_refresh_overview", "\U0001F504 Обновить", class = "btn-primary")
+        shiny::tags$div(style = "margin-top:16px;",
+          shiny::actionButton("btn_refresh_overview", "Refresh", class = "btn-primary")
+        )
       ),
 
-      # ---- 2. Загрузка (ETL) ----
-      shiny::tabPanel(title = "\U0001F4E5 Загрузка (ETL)",
-        shiny::br(),
+      # ---- 2. ETL Pipeline ----
+      shiny::tabPanelBody(value = "tab_etl",
         shiny::fluidRow(
           shiny::column(4,
-            shiny::h4("Параметры"),
-            shiny::numericInput("etl_max_results", "Статей на источник:",
-              value = 50, min = 10, max = 2000, step = 10),
-            shiny::checkboxInput("etl_only_new",
-              "Только новые (not in DB)", value = FALSE),
-            shiny::uiOutput("ui_etl_collector_params"),
-            shiny::hr(),
-            shiny::h5("Коллекторы"),
-            shiny::uiOutput("ui_etl_sources"),
-            shiny::hr(),
-            shiny::checkboxInput("etl_with_ml",
-              "ML-классификация после ETL", value = TRUE),
-            shiny::uiOutput("ui_etl_lang_routing"),
-            shiny::br(),
-            shiny::actionButton("btn_run_etl", "▶ Запустить ETL",
-                                class = "btn-success btn-lg"),
-            shiny::br(), shiny::br(),
-            shiny::uiOutput("etl_status")
+            bslib::card(
+              bslib::card_header("Parameters"),
+              bslib::card_body(
+                shiny::numericInput("etl_max_results", "Papers per source:",
+                  value = 50, min = 10, max = 2000, step = 10),
+                shiny::checkboxInput("etl_only_new", "Only new (not in DB)", value = FALSE),
+                shiny::uiOutput("ui_etl_collector_params"),
+                shiny::tags$hr(),
+                shiny::tags$div(class = "section-title", "Collectors"),
+                shiny::uiOutput("ui_etl_sources"),
+                shiny::tags$hr(),
+                shiny::checkboxInput("etl_with_ml", "ML classification after ETL", value = TRUE),
+                shiny::uiOutput("ui_etl_lang_routing"),
+                shiny::tags$div(style = "margin-top:16px;",
+                  shiny::actionButton("btn_run_etl", "Run ETL", class = "btn-success")
+                ),
+                shiny::uiOutput("etl_status")
+              )
+            )
           ),
           shiny::column(8,
-            shiny::h4("Лог выполнения"),
-            shiny::div(class = "log-area", shiny::verbatimTextOutput("etl_log")),
-            shiny::br(),
-            shiny::h4("Последние загруженные"),
-            DT::DTOutput("etl_result_table")
-          )
-        )
-      ),
-
-      # ---- 3. Таблица статей ----
-      shiny::tabPanel(title = "\U0001F4DA Таблица статей",
-        shiny::br(),
-        shiny::fluidRow(
-          shiny::column(3,
-            shiny::textInput("tbl_search", "\U0001F50D Поиск (title/abstract):", "")
-          ),
-          shiny::column(2,
-            shiny::selectInput("tbl_year", "Год:", choices = c("Все" = ""), selected = "")
-          ),
-          shiny::column(2,
-            shiny::selectInput("tbl_source", "Источник:",
-                               choices = c("Все" = ""), selected = "")
-          ),
-          shiny::column(2,
-            shiny::selectInput("tbl_tag", "Тег (keyword):",
-                               choices = c("Все" = ""), selected = "")
-          ),
-          shiny::column(1,
-            shiny::selectInput("tbl_lang", "Язык:",
-                               choices = c("Все" = ""), selected = "")
-          ),
-          shiny::column(2,
-            shiny::selectInput("tbl_ml_task", "ML-задача:",
-                               choices = c("(нет)" = ""), selected = "")
-          )
-        ),
-        shiny::fluidRow(
-          shiny::column(10),
-          shiny::column(2,
-            shiny::actionButton("btn_tbl_refresh", "\U0001F504", class = "btn-info"),
-            shiny::downloadButton("btn_tbl_export", "CSV")
-          )
-        ),
-        shiny::br(),
-        shiny::textOutput("tbl_count"),
-        shiny::br(),
-        DT::DTOutput("tbl_main")
-      ),
-
-      # ---- 4. ML-классификатор ----
-      shiny::tabPanel(title = "\U0001F916 ML-классификатор",
-        shiny::br(),
-        shiny::fluidRow(
-          shiny::column(6,
-            shiny::h4("Статус сервиса"),
-            shiny::actionButton("btn_ml_check", "Обновить статус", class = "btn-primary"),
-            shiny::br(), shiny::br(),
-            shiny::verbatimTextOutput("ml_info"),
-            shiny::br(),
-            shiny::h4("Пакетная классификация"),
-            shiny::selectInput("ml_task_batch", "Задача:",
-                               choices = ml_task_choices, selected = names(ml_task_choices)[1]),
-            shiny::uiOutput("ml_task_col_info"),
-            shiny::helpText(
-              "Только новые — статьи без результата для выбранной задачи.",
-              "Все (перезаписать) — прогонит заново всё, перезапишет существующие результаты."
+            bslib::card(
+              bslib::card_header("Execution log"),
+              bslib::card_body(
+                shiny::div(class = "log-area", shiny::verbatimTextOutput("etl_log"))
+              )
             ),
-            shiny::actionButton("btn_ml_run", "▶ Только новые", class = "btn-success"),
-            shiny::actionButton("btn_ml_run_all", "\U0001F501 Все (перезаписать)",
-                                class = "btn-warning"),
-            shiny::br(), shiny::br(),
-            shiny::uiOutput("ml_batch_progress"),
-            shiny::verbatimTextOutput("ml_batch_status")
-          ),
-          shiny::column(6,
-            shiny::h4("Ad-hoc: одна аннотация"),
-            shiny::selectInput("ml_task_adhoc", "Задача:",
-                               choices = ml_task_choices, selected = names(ml_task_choices)[1]),
-            shiny::selectInput("ml_adhoc_lang", "Язык текста:",
-                               choices = c("Английский" = "en", "Русский" = "ru"), selected = "en"),
-            shiny::textAreaInput("adhoc_text", "Abstract:", rows = 7, width = "100%",
-              value = paste0("We present a novel approach to intrusion detection ",
-                             "using deep learning combined with attention mechanisms ",
-                             "to identify network anomalies in real-time.")),
-            shiny::actionButton("btn_adhoc", "Классифицировать", class = "btn-primary"),
-            shiny::br(), shiny::br(),
-            shiny::uiOutput("adhoc_result")
+            bslib::card(
+              bslib::card_header("Recent papers"),
+              bslib::card_body(DT::DTOutput("etl_result_table"))
+            )
           )
         )
       ),
 
-      # ---- 5. Аналитика ----
-      shiny::tabPanel(title = "\U0001F4C8 Аналитика",
-        shiny::br(),
-        # Фильтр ML-задачи — влияет на confidence, сравнение и cross-tab
+      # ---- 3. Papers ----
+      shiny::tabPanelBody(value = "tab_papers",
+        bslib::card(
+          bslib::card_body(
+            shiny::fluidRow(
+              shiny::column(3,
+                shiny::textInput("tbl_search", "Search:", "", placeholder = "title or abstract")
+              ),
+              shiny::column(2,
+                shiny::selectInput("tbl_year", "Year:", choices = c("All" = ""), selected = "")
+              ),
+              shiny::column(2,
+                shiny::selectInput("tbl_source", "Source:",
+                                   choices = c("All" = ""), selected = "")
+              ),
+              shiny::column(2,
+                shiny::selectInput("tbl_tag", "Tag:",
+                                   choices = c("All" = ""), selected = "")
+              ),
+              shiny::column(1,
+                shiny::selectInput("tbl_lang", "Lang:",
+                                   choices = c("All" = ""), selected = "")
+              ),
+              shiny::column(2,
+                shiny::selectInput("tbl_ml_task", "ML task:",
+                                   choices = c("(none)" = ""), selected = "")
+              )
+            ),
+            shiny::fluidRow(
+              shiny::column(9, shiny::textOutput("tbl_count")),
+              shiny::column(3, style = "text-align:right;",
+                shiny::actionButton("btn_tbl_refresh", "Refresh", class = "btn-primary btn-sm"),
+                shiny::downloadButton("btn_tbl_export", "CSV", class = "btn-sm")
+              )
+            )
+          )
+        ),
+        bslib::card(
+          bslib::card_body(DT::DTOutput("tbl_main"))
+        )
+      ),
+
+      # ---- 4. ML Classifier ----
+      shiny::tabPanelBody(value = "tab_ml",
+        shiny::fluidRow(
+          shiny::column(6,
+            bslib::card(
+              bslib::card_header("Service status"),
+              bslib::card_body(
+                shiny::actionButton("btn_ml_check", "Check status", class = "btn-primary btn-sm"),
+                shiny::tags$div(style = "margin-top:12px;",
+                  shiny::verbatimTextOutput("ml_info"))
+              )
+            ),
+            bslib::card(
+              bslib::card_header("Batch classification"),
+              bslib::card_body(
+                shiny::selectInput("ml_task_batch", "Task:",
+                                   choices = ml_task_choices, selected = names(ml_task_choices)[1]),
+                shiny::uiOutput("ml_task_col_info"),
+                shiny::helpText(
+                  "New only: papers without results for the selected task. ",
+                  "All (overwrite): re-classify everything."
+                ),
+                shiny::tags$div(style = "margin-top:12px;",
+                  shiny::actionButton("btn_ml_run", "New only", class = "btn-success"),
+                  shiny::actionButton("btn_ml_run_all", "All (overwrite)", class = "btn-warning")
+                ),
+                shiny::uiOutput("ml_batch_progress"),
+                shiny::verbatimTextOutput("ml_batch_status")
+              )
+            )
+          ),
+          shiny::column(6,
+            bslib::card(
+              bslib::card_header("Ad-hoc classification"),
+              bslib::card_body(
+                shiny::selectInput("ml_task_adhoc", "Task:",
+                                   choices = ml_task_choices, selected = names(ml_task_choices)[1]),
+                shiny::selectInput("ml_adhoc_lang", "Text language:",
+                                   choices = c("English" = "en", "Russian" = "ru"), selected = "en"),
+                shiny::textAreaInput("adhoc_text", "Abstract:", rows = 6, width = "100%",
+                  value = paste0("We present a novel approach to intrusion detection ",
+                                 "using deep learning combined with attention mechanisms ",
+                                 "to identify network anomalies in real-time.")),
+                shiny::actionButton("btn_adhoc", "Classify", class = "btn-primary"),
+                shiny::tags$div(style = "margin-top:12px;", shiny::uiOutput("adhoc_result"))
+              )
+            )
+          )
+        )
+      ),
+
+      # ---- 5. Analytics ----
+      shiny::tabPanelBody(value = "tab_analytics",
         shiny::fluidRow(
           shiny::column(3,
-            shiny::selectInput("analytics_ml_task", "ML-задача для анализа:",
-                               choices = c("(нет данных)" = ""), selected = "")
+            shiny::selectInput("analytics_ml_task", "ML task for analysis:",
+                               choices = c("(no data)" = ""), selected = "")
           )
         ),
-        shiny::br(),
-        # Ряд 1: авторы + источники
         shiny::fluidRow(
           shiny::column(6,
-            shiny::h4("Топ авторов"),
-            plotly::plotlyOutput("plot_authors", height = "340px")
+            bslib::card(bslib::card_header("Top authors"),
+              bslib::card_body(plotly::plotlyOutput("plot_authors", height = "320px")))
           ),
           shiny::column(6,
-            shiny::h4("По источникам"),
-            plotly::plotlyOutput("plot_sources_analytics", height = "340px")
+            bslib::card(bslib::card_header("By source"),
+              bslib::card_body(plotly::plotlyOutput("plot_sources_analytics", height = "320px")))
           )
         ),
-        shiny::br(),
-        # Ряд 2: слова + публикации по годам
         shiny::fluidRow(
           shiny::column(6,
-            shiny::h4("Самые частые слова"),
-            plotly::plotlyOutput("plot_words", height = "340px")
+            bslib::card(bslib::card_header("Most frequent words"),
+              bslib::card_body(plotly::plotlyOutput("plot_words", height = "320px")))
           ),
           shiny::column(6,
-            shiny::h4("Публикации по годам"),
-            plotly::plotlyOutput("plot_by_year", height = "340px")
+            bslib::card(bslib::card_header("Publications by year"),
+              bslib::card_body(plotly::plotlyOutput("plot_by_year", height = "320px")))
           )
         ),
-        shiny::br(),
-        # Ряд 3: confidence histogram + avg confidence по тегу + охват ML
         shiny::fluidRow(
           shiny::column(4,
-            shiny::h4("Уверенность ML-модели"),
-            plotly::plotlyOutput("plot_ml_conf", height = "280px")
+            bslib::card(bslib::card_header("ML confidence"),
+              bslib::card_body(plotly::plotlyOutput("plot_ml_conf", height = "260px")))
           ),
           shiny::column(4,
-            shiny::h4("Средний confidence по тегу"),
-            plotly::plotlyOutput("plot_conf_by_tag", height = "280px")
+            bslib::card(bslib::card_header("Avg confidence by tag"),
+              bslib::card_body(plotly::plotlyOutput("plot_conf_by_tag", height = "260px")))
           ),
           shiny::column(4,
-            shiny::h4("Охват ML-классификации"),
-            plotly::plotlyOutput("plot_ml_coverage", height = "280px")
+            bslib::card(bslib::card_header("ML coverage"),
+              bslib::card_body(plotly::plotlyOutput("plot_ml_coverage", height = "260px")))
           )
         ),
-        shiny::br(),
-        # Ряд 4: keyword vs ML
-        shiny::fluidRow(
-          shiny::column(12,
-            shiny::h4("Сравнение: Keyword vs ML классификация"),
-            plotly::plotlyOutput("plot_tag_comparison", height = "320px")
-          )
-        ),
-        shiny::br(),
-        # Ряд 5: cross-tab
-        shiny::fluidRow(
-          shiny::column(12,
-            shiny::h4("Перекрёстная таблица: Keyword-тег / ML-тег"),
-            DT::DTOutput("cross_tab")
-          )
-        )
+        bslib::card(bslib::card_header("Keyword vs ML classification"),
+          bslib::card_body(plotly::plotlyOutput("plot_tag_comparison", height = "300px"))),
+        bslib::card(bslib::card_header("Cross-table: Keyword / ML"),
+          bslib::card_body(DT::DTOutput("cross_tab")))
       ),
 
-      # ---- 6. Обучение модели ----
-      shiny::tabPanel(title = "\U0001F393 Обучение модели",
-        shiny::br(),
+      # ---- 6. Training ----
+      shiny::tabPanelBody(value = "tab_training",
         shiny::tabsetPanel(id = "tr_subtabs", type = "pills",
 
-          # ---------- 6.1 Конфигурация ----------
-          shiny::tabPanel("\U0001F4DD Конфигурация",
-            shiny::br(),
-            shiny::fluidRow(
-              shiny::column(6,
-                shiny::h4("Классы (таксономия)"),
-                shiny::helpText("Эти классы передаются LLM в промпте. Можно редактировать прямо в таблице, добавлять и удалять. Имя в snake_case."),
-                rhandsontable::rHandsontableOutput("tr_classes_table", height = "320px"),
-                shiny::br(),
-                shiny::actionButton("btn_tr_class_add", "➕ Добавить класс", class = "btn-default"),
-                shiny::actionButton("btn_tr_class_save", "💾 Сохранить классы", class = "btn-success"),
-                shiny::br(), shiny::br(),
-                shiny::verbatimTextOutput("tr_classes_status")
+          # 6.1 Configuration
+          shiny::tabPanel("Configuration",
+            shiny::tags$div(style = "margin-top:16px;",
+              shiny::fluidRow(
+                shiny::column(6,
+                  bslib::card(
+                    bslib::card_header("Taxonomy (classes)"),
+                    bslib::card_body(
+                      shiny::helpText("Classes passed to the LLM prompt. Edit in-place, names in snake_case."),
+                      rhandsontable::rHandsontableOutput("tr_classes_table", height = "300px"),
+                      shiny::tags$div(style = "margin-top:12px;",
+                        shiny::actionButton("btn_tr_class_add", "Add class", class = "btn-primary btn-sm"),
+                        shiny::actionButton("btn_tr_class_save", "Save", class = "btn-success btn-sm")
+                      ),
+                      shiny::verbatimTextOutput("tr_classes_status")
+                    )
+                  )
+                ),
+                shiny::column(6,
+                  bslib::card(
+                    bslib::card_header("Prompts"),
+                    bslib::card_body(
+                      shiny::tags$label("System prompt"),
+                      shiny::textAreaInput("tr_system_prompt", NULL, rows = 5, width = "100%", value = ""),
+                      shiny::tags$label("User template"),
+                      shiny::helpText("Placeholders: {title}, {abstract}, {classes_list}, {classes}"),
+                      shiny::textAreaInput("tr_user_template", NULL, rows = 4, width = "100%", value = ""),
+                      shiny::actionButton("btn_tr_prompts_save", "Save prompts", class = "btn-success btn-sm"),
+                      shiny::verbatimTextOutput("tr_prompts_status")
+                    )
+                  )
+                )
               ),
-              shiny::column(6,
-                shiny::h4("Системный промпт LLM"),
-                shiny::textAreaInput("tr_system_prompt", NULL, rows = 7, width = "100%",
-                                     value = ""),
-                shiny::h4("Пользовательский шаблон промпта"),
-                shiny::helpText("Доступные плейсхолдеры: {title}, {abstract}, {classes_list}, {classes}"),
-                shiny::textAreaInput("tr_user_template", NULL, rows = 6, width = "100%",
-                                     value = ""),
-                shiny::actionButton("btn_tr_prompts_save", "💾 Сохранить промпты",
-                                    class = "btn-success"),
-                shiny::br(), shiny::br(),
-                shiny::verbatimTextOutput("tr_prompts_status")
-              )
-            ),
-            shiny::br(),
-            shiny::h4("Настройки LLM-провайдера"),
-            shiny::fluidRow(
-              shiny::column(3,
-                shiny::selectInput("tr_llm_provider", "Провайдер:",
-                                   choices = c("OpenAI" = "openai",
-                                               "xAI Grok" = "grok",
-                                               "DeepSeek" = "deepseek",
-                                               "Other (OpenAI-compatible)" = "other"),
-                                   selected = "openai"),
-                shiny::textInput("tr_llm_model", "Модель:", value = "gpt-4o-mini",
-                                 placeholder = "gpt-4o-mini / grok-3-mini / deepseek-chat")
-              ),
-              shiny::column(3,
-                shiny::passwordInput("tr_llm_api_key", "API key:",
-                                     value = "", placeholder = "оставьте пустым, чтобы не менять"),
-                shiny::textInput("tr_llm_base_url", "base_url (опционально):",
-                                 value = "", placeholder = "напр. https://api.deepseek.com/v1")
-              ),
-              shiny::column(3,
-                shiny::numericInput("tr_llm_temp", "temperature:", value = 0,
-                                    min = 0, max = 2, step = 0.1),
-                shiny::numericInput("tr_llm_max_tokens", "max_tokens:", value = 32,
-                                    min = 8, max = 1024)
-              ),
-              shiny::column(3,
-                shiny::numericInput("tr_llm_concurrency", "concurrency:", value = 4,
-                                    min = 1, max = 32),
-                shiny::numericInput("tr_llm_timeout", "timeout, сек:", value = 60,
-                                    min = 5, max = 600)
-              )
-            ),
-            shiny::actionButton("btn_tr_llm_save", "💾 Сохранить LLM",
-                                class = "btn-success"),
-            shiny::actionButton("btn_tr_health", "\U0001F50C Проверить подключение",
-                                class = "btn-info"),
-            shiny::br(), shiny::br(),
-            shiny::verbatimTextOutput("tr_llm_status"),
-            shiny::verbatimTextOutput("tr_health_info")
-          ),
-
-          # ---------- 6.2 Сбор данных ----------
-          shiny::tabPanel("\U0001F4E5 Сбор данных",
-            shiny::br(),
-            shiny::fluidRow(
-              shiny::column(4,
-                shiny::h4("Параметры"),
-                shiny::selectInput("tr_collect_target", "Сколько статей собрать:",
-                                   choices = c("1 000"  = 1000,
-                                               "5 000"  = 5000,
-                                               "10 000" = 10000,
-                                               "20 000" = 20000,
-                                               "50 000" = 50000,
-                                               "70 000" = 70000,
-                                               "100 000" = 100000),
-                                   selected = 10000),
-                shiny::textInput("tr_collect_query",
-                                 "arXiv search_query (пусто = по умолчанию):",
-                                 value = ""),
-                shiny::numericInput("tr_collect_page_size", "page_size:",
-                                    value = 200, min = 50, max = 2000, step = 50),
-                shiny::actionButton("btn_tr_collect", "▶ Старт сбора",
-                                    class = "btn-success btn-lg"),
-                shiny::br(), shiny::br(),
-                shiny::verbatimTextOutput("tr_collect_status"),
-                shiny::uiOutput("tr_collect_progress")
-              ),
-              shiny::column(8,
-                shiny::h4("Лог"),
-                shiny::div(class = "log-area", shiny::verbatimTextOutput("tr_collect_log")),
-                shiny::br(),
-                shiny::h4("Сохранённые сырые выборки"),
-                shiny::actionButton("btn_tr_files_raw_refresh", "\U0001F504",
-                                    class = "btn-info btn-sm"),
-                DT::DTOutput("tr_files_raw")
-              )
-            )
-          ),
-
-          # ---------- 6.3 Разметка LLM ----------
-          shiny::tabPanel("\U0001F916 Разметка LLM",
-            shiny::br(),
-            shiny::fluidRow(
-              shiny::column(4,
-                shiny::h4("Параметры"),
-                shiny::uiOutput("ui_tr_label_raw_pick"),
-                shiny::numericInput("tr_label_max_rows",
-                                    "Сколько строк размечать (0 = все):",
-                                    value = 0, min = 0, max = 1000000, step = 100),
-                shiny::actionButton("btn_tr_label", "▶ Запустить LLM",
-                                    class = "btn-success btn-lg"),
-                shiny::actionButton("btn_tr_label_cancel", "⏹ Отмена",
-                                    class = "btn-warning"),
-                shiny::br(), shiny::br(),
-                shiny::verbatimTextOutput("tr_label_status"),
-                shiny::uiOutput("tr_label_progress")
-              ),
-              shiny::column(8,
-                shiny::h4("Лог разметки"),
-                shiny::div(class = "log-area", shiny::verbatimTextOutput("tr_label_log")),
-                shiny::br(),
-                shiny::h4("Размеченные выборки"),
-                shiny::actionButton("btn_tr_files_labeled_refresh", "\U0001F504",
-                                    class = "btn-info btn-sm"),
-                DT::DTOutput("tr_files_labeled")
-              )
-            )
-          ),
-
-          # ---------- 6.4 Excel ----------
-          shiny::tabPanel("\U0001F4D2 Excel",
-            shiny::br(),
-            shiny::fluidRow(
-              shiny::column(4,
-                shiny::h4("Экспорт в Excel"),
-                shiny::uiOutput("ui_tr_excel_labeled_pick"),
-                shiny::numericInput("tr_excel_max_rows",
-                                    "Макс. строк в Excel (0 = все):",
-                                    value = 0, min = 0, max = 1000000, step = 1000),
-                shiny::actionButton("btn_tr_export_excel", "▶ Экспорт",
-                                    class = "btn-success"),
-                shiny::br(), shiny::br(),
-                shiny::verbatimTextOutput("tr_excel_status")
-              ),
-              shiny::column(8,
-                shiny::h4("Готовые .xlsx"),
-                shiny::actionButton("btn_tr_files_excel_refresh", "\U0001F504",
-                                    class = "btn-info btn-sm"),
-                DT::DTOutput("tr_files_excel"),
-                shiny::helpText(
-                  "Файлы лежат в training_data/excel/. ",
-                  "Можно отредактировать вручную (исправить метки) и подать на обучение."
+              bslib::card(
+                bslib::card_header("LLM Provider"),
+                bslib::card_body(
+                  shiny::fluidRow(
+                    shiny::column(3,
+                      shiny::selectInput("tr_llm_provider", "Provider:",
+                                         choices = c("OpenAI" = "openai",
+                                                     "xAI Grok" = "grok",
+                                                     "DeepSeek" = "deepseek",
+                                                     "Other (OpenAI-compatible)" = "other"),
+                                         selected = "openai"),
+                      shiny::textInput("tr_llm_model", "Model:", value = "gpt-4o-mini",
+                                       placeholder = "gpt-4o-mini / grok-3-mini / deepseek-chat")
+                    ),
+                    shiny::column(3,
+                      shiny::passwordInput("tr_llm_api_key", "API key:",
+                                           value = "", placeholder = "leave empty to keep current"),
+                      shiny::textInput("tr_llm_base_url", "base_url:",
+                                       value = "", placeholder = "auto-filled from provider")
+                    ),
+                    shiny::column(3,
+                      shiny::numericInput("tr_llm_temp", "temperature:", value = 0,
+                                          min = 0, max = 2, step = 0.1),
+                      shiny::numericInput("tr_llm_max_tokens", "max_tokens:", value = 32,
+                                          min = 8, max = 1024)
+                    ),
+                    shiny::column(3,
+                      shiny::numericInput("tr_llm_concurrency", "concurrency:", value = 4,
+                                          min = 1, max = 32),
+                      shiny::numericInput("tr_llm_timeout", "timeout (s):", value = 60,
+                                          min = 5, max = 600)
+                    )
+                  ),
+                  shiny::tags$div(style = "margin-top:8px;",
+                    shiny::actionButton("btn_tr_llm_save", "Save LLM", class = "btn-success btn-sm"),
+                    shiny::actionButton("btn_tr_health", "Test connection", class = "btn-primary btn-sm")
+                  ),
+                  shiny::verbatimTextOutput("tr_llm_status"),
+                  shiny::verbatimTextOutput("tr_health_info")
                 )
               )
             )
           ),
 
-          # ---------- 6.5 Обучение ----------
-          shiny::tabPanel("\U0001F525 Обучение",
-            shiny::br(),
-            shiny::fluidRow(
-              shiny::column(4,
-                shiny::h4("Гиперпараметры"),
-                shiny::uiOutput("ui_tr_train_excel_pick"),
-                shiny::textInput("tr_train_model_name",
-                                 "Имя выходной модели (без .pt):",
-                                 value = "custom_model"),
-                shiny::textInput("tr_train_base_model",
-                                 "Базовая HuggingFace-модель:",
-                                 value = "distilbert-base-uncased"),
-                shiny::numericInput("tr_train_epochs", "epochs:", value = 8,
-                                    min = 1, max = 200, step = 1),
-                shiny::numericInput("tr_train_batch_size", "batch_size:", value = 16,
-                                    min = 1, max = 256, step = 1),
-                shiny::numericInput("tr_train_lr", "learning rate:", value = 2e-5,
-                                    min = 1e-7, max = 1, step = 1e-6),
-                shiny::numericInput("tr_train_max_length", "max_length:", value = 256,
-                                    min = 32, max = 1024, step = 32),
-                shiny::numericInput("tr_train_test_size", "test_size:", value = 0.1,
-                                    min = 0.01, max = 0.4, step = 0.01),
-                shiny::numericInput("tr_train_val_size", "val_size:", value = 0.1,
-                                    min = 0.01, max = 0.4, step = 0.01),
-                shiny::textInput("tr_train_mlflow_uri", "MLflow tracking URI:",
-                                 value = Sys.getenv("MLFLOW_TRACKING_URI",
-                                                    "http://localhost:5000"),
-                                 placeholder = "http://localhost:5000"),
-                shiny::helpText(
-                  "Подсказка: train_test_split дропает классы, в которых меньше",
-                  " ceil(1/(test+val)) + 1 примеров. Дефолт 0.1+0.1 → нужно ≥ 6 ",
-                  "статей на класс. Для маленьких выборок понизьте обе доли ",
-                  "(0.05+0.05 → ≥ 11 на класс не нужно)."),
-                shiny::actionButton("btn_tr_train", "▶ Старт обучения",
-                                    class = "btn-success btn-lg"),
-                shiny::actionButton("btn_tr_train_cancel", "⏹ Отмена",
-                                    class = "btn-warning"),
-                shiny::br(), shiny::br(),
-                shiny::verbatimTextOutput("tr_train_status"),
-                shiny::uiOutput("tr_train_progress")
-              ),
-              shiny::column(8,
-                shiny::h4("Лог обучения"),
-                shiny::div(class = "log-area", shiny::verbatimTextOutput("tr_train_log")),
-                shiny::br(),
-                shiny::h4("MLflow"),
-                shiny::uiOutput("tr_mlflow_link"),
-                shiny::br(),
-                shiny::actionButton("btn_tr_reload_models", "\U0001F501 Reload models",
-                                    class = "btn-primary"),
-                shiny::helpText("Обновляет список моделей в инференс-сервисе после обучения."),
-                shiny::br(),
-                shiny::verbatimTextOutput("tr_reload_status"),
-                shiny::hr(),
-                shiny::h4("Зарегистрировать как ML-задачу"),
-                shiny::helpText(
-                  "Добавляет обученную модель в дропдауны \U201CЗадача\U201D на ",
-                  "вкладках ML-классификатор и ETL. Имя модели берётся из ",
-                  "«", "Имя выходной модели", "» выше."),
-                shiny::textInput("tr_register_task_name",
-                                 "Идентификатор задачи (snake_case):",
-                                 value = "", placeholder = "my_grok_task"),
-                shiny::textInput("tr_register_task_label",
-                                 "Отображаемое название:",
-                                 value = "", placeholder = "Моя модель (Grok)"),
-                shiny::selectInput("tr_register_task_lang",
-                                   "Язык:",
-                                   choices = c("Английский" = "en",
-                                               "Русский" = "ru"),
-                                   selected = "en"),
-                shiny::actionButton("btn_tr_register_task",
-                                    "\U0001F4DD Зарегистрировать",
-                                    class = "btn-primary"),
-                shiny::br(), shiny::br(),
-                shiny::verbatimTextOutput("tr_register_status")
+          # 6.2 Data collection
+          shiny::tabPanel("Data collection",
+            shiny::tags$div(style = "margin-top:16px;",
+              shiny::fluidRow(
+                shiny::column(4,
+                  bslib::card(
+                    bslib::card_header("Parameters"),
+                    bslib::card_body(
+                      shiny::selectInput("tr_collect_target", "Papers to collect:",
+                                         choices = c("1,000" = 1000, "5,000" = 5000,
+                                                     "10,000" = 10000, "20,000" = 20000,
+                                                     "50,000" = 50000, "70,000" = 70000,
+                                                     "100,000" = 100000),
+                                         selected = 10000),
+                      shiny::textInput("tr_collect_query", "arXiv query (blank = default):", value = ""),
+                      shiny::numericInput("tr_collect_page_size", "page_size:",
+                                          value = 200, min = 50, max = 2000, step = 50),
+                      shiny::actionButton("btn_tr_collect", "Start collection", class = "btn-success"),
+                      shiny::verbatimTextOutput("tr_collect_status"),
+                      shiny::uiOutput("tr_collect_progress")
+                    )
+                  )
+                ),
+                shiny::column(8,
+                  bslib::card(bslib::card_header("Log"),
+                    bslib::card_body(shiny::div(class = "log-area",
+                      shiny::verbatimTextOutput("tr_collect_log")))),
+                  bslib::card(bslib::card_header("Raw datasets"),
+                    bslib::card_body(
+                      shiny::actionButton("btn_tr_files_raw_refresh", "Refresh", class = "btn-primary btn-sm"),
+                      DT::DTOutput("tr_files_raw")))
+                )
               )
             )
           ),
 
-          # ---------- 6.6 Все джобы ----------
-          shiny::tabPanel("\U0001F4DC Джобы",
-            shiny::br(),
-            shiny::actionButton("btn_tr_jobs_refresh", "\U0001F504 Обновить",
-                                class = "btn-info"),
-            shiny::br(), shiny::br(),
-            DT::DTOutput("tr_jobs_table"),
-            shiny::br(),
-            shiny::h4("Лог выбранного джоба"),
-            shiny::helpText("Нажмите на строку таблицы, чтобы увидеть полный лог."),
-            shiny::div(class = "log-area", shiny::verbatimTextOutput("tr_job_log_detail"))
+          # 6.3 LLM Labeling
+          shiny::tabPanel("LLM Labeling",
+            shiny::tags$div(style = "margin-top:16px;",
+              shiny::fluidRow(
+                shiny::column(4,
+                  bslib::card(
+                    bslib::card_header("Parameters"),
+                    bslib::card_body(
+                      shiny::uiOutput("ui_tr_label_raw_pick"),
+                      shiny::numericInput("tr_label_max_rows", "Rows to label (0 = all):",
+                                          value = 0, min = 0, max = 1000000, step = 100),
+                      shiny::tags$div(style = "margin-top:12px;",
+                        shiny::actionButton("btn_tr_label", "Start LLM", class = "btn-success"),
+                        shiny::actionButton("btn_tr_label_cancel", "Cancel", class = "btn-warning btn-sm")
+                      ),
+                      shiny::verbatimTextOutput("tr_label_status"),
+                      shiny::uiOutput("tr_label_progress")
+                    )
+                  )
+                ),
+                shiny::column(8,
+                  bslib::card(bslib::card_header("Labeling log"),
+                    bslib::card_body(shiny::div(class = "log-area",
+                      shiny::verbatimTextOutput("tr_label_log")))),
+                  bslib::card(bslib::card_header("Labeled datasets"),
+                    bslib::card_body(
+                      shiny::actionButton("btn_tr_files_labeled_refresh", "Refresh", class = "btn-primary btn-sm"),
+                      DT::DTOutput("tr_files_labeled")))
+                )
+              )
+            )
+          ),
+
+          # 6.4 Excel
+          shiny::tabPanel("Excel",
+            shiny::tags$div(style = "margin-top:16px;",
+              shiny::fluidRow(
+                shiny::column(4,
+                  bslib::card(
+                    bslib::card_header("Export to Excel"),
+                    bslib::card_body(
+                      shiny::uiOutput("ui_tr_excel_labeled_pick"),
+                      shiny::numericInput("tr_excel_max_rows", "Max rows (0 = all):",
+                                          value = 0, min = 0, max = 1000000, step = 1000),
+                      shiny::actionButton("btn_tr_export_excel", "Export", class = "btn-success"),
+                      shiny::verbatimTextOutput("tr_excel_status")
+                    )
+                  )
+                ),
+                shiny::column(8,
+                  bslib::card(bslib::card_header(".xlsx files"),
+                    bslib::card_body(
+                      shiny::actionButton("btn_tr_files_excel_refresh", "Refresh", class = "btn-primary btn-sm"),
+                      DT::DTOutput("tr_files_excel"),
+                      shiny::helpText("Files in training_data/excel/. Edit labels manually, then train.")
+                    ))
+                )
+              )
+            )
+          ),
+
+          # 6.5 Training
+          shiny::tabPanel("Train model",
+            shiny::tags$div(style = "margin-top:16px;",
+              shiny::fluidRow(
+                shiny::column(4,
+                  bslib::card(
+                    bslib::card_header("Hyperparameters"),
+                    bslib::card_body(
+                      shiny::uiOutput("ui_tr_train_excel_pick"),
+                      shiny::textInput("tr_train_model_name", "Output model name:", value = "custom_model"),
+                      shiny::textInput("tr_train_base_model", "Base HuggingFace model:",
+                                       value = "distilbert-base-uncased"),
+                      shiny::numericInput("tr_train_epochs", "epochs:", value = 8, min = 1, max = 200),
+                      shiny::numericInput("tr_train_batch_size", "batch_size:", value = 16, min = 1, max = 256),
+                      shiny::numericInput("tr_train_lr", "learning rate:", value = 2e-5, min = 1e-7, max = 1, step = 1e-6),
+                      shiny::numericInput("tr_train_max_length", "max_length:", value = 256, min = 32, max = 1024, step = 32),
+                      shiny::numericInput("tr_train_test_size", "test_size:", value = 0.1, min = 0.01, max = 0.4, step = 0.01),
+                      shiny::numericInput("tr_train_val_size", "val_size:", value = 0.1, min = 0.01, max = 0.4, step = 0.01),
+                      shiny::textInput("tr_train_mlflow_uri", "MLflow URI:",
+                                       value = Sys.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")),
+                      shiny::helpText("train_test_split drops classes with fewer than ceil(1/(test+val))+1 samples."),
+                      shiny::tags$div(style = "margin-top:12px;",
+                        shiny::actionButton("btn_tr_train", "Start training", class = "btn-success"),
+                        shiny::actionButton("btn_tr_train_cancel", "Cancel", class = "btn-warning btn-sm")
+                      ),
+                      shiny::verbatimTextOutput("tr_train_status"),
+                      shiny::uiOutput("tr_train_progress")
+                    )
+                  )
+                ),
+                shiny::column(8,
+                  bslib::card(bslib::card_header("Training log"),
+                    bslib::card_body(shiny::div(class = "log-area",
+                      shiny::verbatimTextOutput("tr_train_log")))),
+                  bslib::card(bslib::card_header("Post-training"),
+                    bslib::card_body(
+                      shiny::uiOutput("tr_mlflow_link"),
+                      shiny::actionButton("btn_tr_reload_models", "Reload models", class = "btn-primary btn-sm"),
+                      shiny::helpText("Refreshes inference service model list."),
+                      shiny::verbatimTextOutput("tr_reload_status"),
+                      shiny::tags$hr(),
+                      shiny::tags$div(class = "section-title", "Register as ML task"),
+                      shiny::textInput("tr_register_task_name", "Task ID (snake_case):",
+                                       value = "", placeholder = "my_custom_task"),
+                      shiny::textInput("tr_register_task_label", "Display name:",
+                                       value = "", placeholder = "My Custom Model"),
+                      shiny::selectInput("tr_register_task_lang", "Language:",
+                                         choices = c("English" = "en", "Russian" = "ru"), selected = "en"),
+                      shiny::actionButton("btn_tr_register_task", "Register", class = "btn-primary btn-sm"),
+                      shiny::verbatimTextOutput("tr_register_status")
+                    ))
+                )
+              )
+            )
+          ),
+
+          # 6.6 Jobs
+          shiny::tabPanel("Jobs",
+            shiny::tags$div(style = "margin-top:16px;",
+              shiny::actionButton("btn_tr_jobs_refresh", "Refresh", class = "btn-primary btn-sm"),
+              shiny::tags$div(style = "margin-top:12px;", DT::DTOutput("tr_jobs_table")),
+              bslib::card(bslib::card_header("Job log"),
+                bslib::card_body(
+                  shiny::helpText("Click a row to see the full log."),
+                  shiny::div(class = "log-area", shiny::verbatimTextOutput("tr_job_log_detail"))
+                ))
+            )
           )
         )
       ),
 
-      # ---- 7. Настройки ----
-      shiny::tabPanel(title = "⚙ Настройки",
-        shiny::br(),
-        shiny::h4("Окружение"),
-        shiny::verbatimTextOutput("settings_info"),
-        shiny::br(),
-        shiny::h4("Действия"),
-        shiny::actionButton("btn_reinit_db", "⚠ Переинициализировать схему БД",
-                            class = "btn-warning"),
-        shiny::helpText("Создаст таблицы и добавит недостающие колонки. Данные не удалит."),
-        shiny::br(), shiny::br(),
-        shiny::verbatimTextOutput("settings_log"),
-        shiny::hr(),
-        shiny::h4("Удаление статей"),
-        shiny::fluidRow(
-          shiny::column(4,
-            shiny::selectizeInput("del_tags", "По keyword-тегу:",
-                                  choices = c(), multiple = TRUE,
-                                  options = list(placeholder = "выберите один или несколько"))
-          ),
-          shiny::column(3,
-            shiny::selectInput("del_source", "По источнику:",
-                               choices = c("Все источники" = ""), selected = "")
-          ),
-          shiny::column(2,
-            shiny::br(),
-            shiny::actionButton("btn_delete_articles", "\U26A0 Удалить",
-                                class = "btn-danger")
-          ),
-          shiny::column(3,
-            shiny::br(),
-            shiny::textOutput("del_preview")
+      # ---- 7. Settings ----
+      shiny::tabPanelBody(value = "tab_settings",
+        bslib::card(
+          bslib::card_header("Environment"),
+          bslib::card_body(shiny::verbatimTextOutput("settings_info"))
+        ),
+        bslib::card(
+          bslib::card_header("Actions"),
+          bslib::card_body(
+            shiny::actionButton("btn_reinit_db", "Re-initialize DB schema", class = "btn-warning btn-sm"),
+            shiny::helpText("Creates tables and adds missing columns. Does not delete data."),
+            shiny::verbatimTextOutput("settings_log")
           )
         ),
-        shiny::verbatimTextOutput("del_status")
+        bslib::card(
+          bslib::card_header("Delete papers"),
+          bslib::card_body(
+            shiny::fluidRow(
+              shiny::column(4,
+                shiny::selectizeInput("del_tags", "By keyword tag:",
+                                      choices = c(), multiple = TRUE,
+                                      options = list(placeholder = "select one or more"))
+              ),
+              shiny::column(3,
+                shiny::selectInput("del_source", "By source:",
+                                   choices = c("All sources" = ""), selected = "")
+              ),
+              shiny::column(2,
+                shiny::actionButton("btn_delete_articles", "Delete", class = "btn-danger btn-sm")
+              ),
+              shiny::column(3, shiny::textOutput("del_preview"))
+            ),
+            shiny::verbatimTextOutput("del_status")
+          )
+        )
       )
     )
   )
@@ -612,6 +623,11 @@ launch_app <- function(host = "0.0.0.0",
 #' @noRd
 .build_server <- function(ml_service_url, init_tasks = NULL, init_choices = NULL) {
   function(input, output, session) {
+
+    # Sidebar navigation → hidden tabset switching
+    shiny::observeEvent(input$sidebar_nav, {
+      shiny::updateTabsetPanel(session, "main_tabs", selected = input$sidebar_nav)
+    })
 
     publications      <- shiny::reactiveVal(NULL)
     etl_log_text      <- shiny::reactiveVal("")
