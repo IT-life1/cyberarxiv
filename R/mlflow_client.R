@@ -382,11 +382,14 @@ list_ml_tasks <- function(ml_service_url = NULL) {
 #'   Use \code{list_ml_tasks()} to see available tasks and their loaded models.
 #' @param sources Character vector of collector names to run.
 #' @param collectors_dir Additional directory to scan for collector YAML files.
+#' @param db_path Path to DuckDB file. If NULL, uses the package default.
 #'
 #' @export
 etl_with_ml <- function(max_results = 100, ml_service_url = NULL,
-                        task = "default", sources = NULL, collectors_dir = NULL) {
-  etl(max_results = max_results, sources = sources, collectors_dir = collectors_dir)
+                        task = "default", sources = NULL, collectors_dir = NULL,
+                        db_path = NULL) {
+  etl(max_results = max_results, sources = sources, collectors_dir = collectors_dir,
+      db_path = db_path)
 
   if (is.null(ml_service_url))
     ml_service_url <- Sys.getenv("ML_SERVICE_URL", "http://localhost:5001")
@@ -401,7 +404,7 @@ etl_with_ml <- function(max_results = 100, ml_service_url = NULL,
     stop("Unknown ML task '", task, "'. Available: ", paste(names(tasks), collapse = ", "))
   language_models <- tasks[[task]]$models
 
-  data <- load_raw_data()
+  data <- load_publications(db_path = db_path)
   if (nrow(data) == 0L) return(invisible(list(updated = 0L)))
 
   available <- tryCatch(
