@@ -453,6 +453,231 @@
   do.call(rbind, rows)
 }
 
+# ── Generic JSON API ────────────────────────────────────────────────────────
+
+#' @noRd
+.resolve_dot_path_simple <- function(obj, path) {
+  parts <- strsplit(path, "\\.")[[1L]]
+  current <- obj
+  for (part in parts) {
+    if (is.null(current) || !part %in% names(current)) return(NULL)
+    current <- current[[part]]
+  }
+  current
+}
+
+#' @noRd
+.resolve_dot_path <- function(obj, path) {
+  if (is.null(obj) || is.null(path) || is.na(path) || !nzchar(path))
+    return(NA_character_)
+
+  # Handle array[].field pattern
+  if (grepl("\\[\\]", path)) {
+    parts <- strsplit(path, "\\[\\]\\.", fixed = FALSE)[[1L]]
+    arr_path <- sub("\\[\\]$", "", parts[1L])
+    field <- if (length(parts) > 1L) parts[2L] else NULL
+
+    arr <- .resolve_dot_path_simple(obj, arr_path)
+    if (!is.list(arr)) return(NA_character_)
+
+    if (is.null(field)) {
+      # array[] — array of scalars
+      vals <- unlist(arr)
+      if (is.null(vals) || length(vals) == 0L) return(NA_character_)
+      return(paste(vals, collapse = ", "))
+    }
+    # array[].field — extract field from each element
+    values <- vapply(arr, function(item) {
+      v <- item[[field]]
+      if (is.null(v)) NA_character_ else as.character(v)
+    }, character(1L))
+    values <- values[!is.na(values)]
+    if (length(values) == 0L) return(NA_character_)
+    return(paste(values, collapse = ", "))
+  }
+
+  # Simple dot-path
+  result <- .resolve_dot_path_simple(obj, path)
+  if (is.null(result)) return(NA_character_)
+  as.character(result)
+}
+
+#' @noRd
+.apply_field_map <- function(item, field_map) {
+  standard_fields <- c("id", "title", "abstract", "link",
+                       "authors", "published_date", "categories")
+  result <- setNames(
+    as.list(rep(NA_character_, length(standard_fields))),
+    standard_fields
+  )
+  for (std_name in names(field_map)) {
+    if (std_name %in% standard_fields) {
+      result[[std_name]] <- .resolve_dot_path(item, field_map[[std_name]])
+    }
+  }
+  result
+}
+
+#' @noRd
+.build_auth_headers <- function(auth) {
+  if (is.null(auth)) return(list(headers = NULL, params = list()))
+
+  type <- auth$type %||% "bearer"
+  token <- auth$token %||% ""
+
+  switch(type,
+    bearer = list(
+      headers = httr::add_headers(Authorization = paste("Bearer", token)),
+      params = list()
+    ),
+    header = list(
+      headers = httr::add_headers(.headers = setNames(token, auth$header_name)),
+      params = list()
+    ),
+    query_param = list(
+      headers = NULL,
+      params = setNames(list(token), auth$param_name)
+    ),
+    list(headers = NULL, params = list())
+  )
+}
+
+#' @noRd
+.fetch_json_api <- function(spec, max_results = 100L) {
+  base_url <- paste0(spec$base_url, spec$endpoint %||% "")
+  auth <- .build_auth_headers(spec$auth)
+  pag <- spec$pagination
+  field_map <- spec$field_map
+  rate_secs <- as.numeric(spec$rate_limit_secs %||% 1.0)
+
+  if (is.null(field_map))
+    stop("json_api collector '", spec$name, "' must define 'field_map' in YAML")
+
+  page_size <- if (!is.null(pag)) as.integer(pag$page_size %||% 10L) else max_results
+
+  all_items <- list()
+  current_offset <- 0L
+  next_cursor <- NULL
+
+  repeat {
+    # Build query params
+    params <- spec$query$params %||% list()
+    params <- c(params, auth$params)
+
+    if (!is.null(pag)) {
+      pag_type <- pag$type %||% "offset"
+      limit_param <- pag$limit_param %||% "limit"
+      remaining <- max_results - length(all_items)
+
+      switch(pag_type,
+        offset = {
+          params[[limit_param]] <- min(page_size, remaining)
+          offset_param <- pag$offset_param %||% "offset"
+          if (current_offset > 0L || !isTRUE(pag$skip_zero_offset)) {
+            params[[offset_param]] <- current_offset
+          }
+        },
+        cursor = {
+          params[[limit_param]] <- min(page_size, remaining)
+          if (!is.null(next_cursor)) {
+            cursor_param <- pag$cursor_param %||% "cursor"
+            params[[cursor_param]] <- next_cursor
+          }
+        },
+        page = {
+          params[[limit_param]] <- page_size
+          page_param <- pag$page_param %||% "page"
+          start_page <- as.integer(pag$start_page %||% 1L)
+          current_page <- start_page + current_offset
+          params[[page_param]] <- current_page
+        }
+      )
+    }
+
+    # HTTP request
+    resp <- tryCatch(
+      httr::GET(base_url, auth$headers, query = params,
+                httr::user_agent("cyberarxiv/0.1.0"),
+                httr::timeout(60)),
+      error = function(e) {
+        warning("json_api fetch error (", spec$name, "): ", e$message)
+        NULL
+      }
+    )
+    if (is.null(resp)) break
+    if (httr::status_code(resp) != 200L) {
+      warning("json_api HTTP ", httr::status_code(resp), " from '", spec$name, "'")
+      break
+    }
+
+    # Parse JSON
+    body <- tryCatch(
+      jsonlite::fromJSON(httr::content(resp, as = "text", encoding = "UTF-8"),
+                         simplifyVector = FALSE),
+      error = function(e) {
+        warning("json_api JSON parse error (", spec$name, "): ", e$message)
+        NULL
+      }
+    )
+    if (is.null(body)) break
+
+    # Extract results array
+    results <- if (!is.null(spec$response$results_path)) {
+      .resolve_dot_path_simple(body, spec$response$results_path)
+    } else {
+      body
+    }
+    if (!is.list(results) || length(results) == 0L) break
+
+    # Map fields for each item
+    for (item in results) {
+      all_items[[length(all_items) + 1L]] <- .apply_field_map(item, field_map)
+      if (length(all_items) >= max_results) break
+    }
+
+    # Stop conditions
+    if (length(all_items) >= max_results) break
+    if (is.null(pag)) break
+
+    # Check total
+    if (!is.null(spec$response$total_path)) {
+      total <- .resolve_dot_path_simple(body, spec$response$total_path)
+      if (!is.null(total) && length(all_items) >= as.integer(total)) break
+    }
+
+    # Advance pagination
+    pag_type <- pag$type %||% "offset"
+    switch(pag_type,
+      offset = {
+        current_offset <- current_offset + page_size
+      },
+      cursor = {
+        cursor_path <- pag$cursor_path %||% "nextCursor"
+        next_cursor <- .resolve_dot_path_simple(body, cursor_path)
+        if (is.null(next_cursor)) break
+      },
+      page = {
+        current_offset <- current_offset + 1L
+      }
+    )
+
+    Sys.sleep(rate_secs)
+  }
+
+  if (length(all_items) == 0L) return(.empty_feed_df())
+
+  # Build data.frame
+  df <- do.call(rbind, lapply(all_items, function(x) {
+    as.data.frame(x, stringsAsFactors = FALSE)
+  }))
+  # Add updated_date = published_date if not mapped
+  if (!"updated_date" %in% names(df)) {
+    df$updated_date <- df$published_date
+  }
+  rownames(df) <- NULL
+  df
+}
+
 # ── R script collector ────────────────────────────────────────────────────────
 
 #' @noRd
