@@ -115,3 +115,97 @@ collect <- function(max_results = 100, ...) {
 4. Programmatic: `extra_dirs` argument in `collect_all()`
 
 A spec with the same `name` in a later directory overrides an earlier one.
+
+## ID normalisation
+
+Every collector output goes through `.standardize_collector_output()` in `R/collector_registry.R`.
+Paper IDs are normalised as follows:
+
+| Input ID | Result |
+|----------|--------|
+| URL (starts with `http://` or `https://`) | `{id_prefix}{sha256(url)}` — compact, stable, collision-free |
+| Non-URL (arXiv `2401.12345`, CORE numeric `98765432`) | `{id_prefix}{id}` — unchanged |
+
+This means two different URLs always produce different IDs, but the same URL always
+produces the same ID regardless of when it was fetched.
+
+**Example:** a КиберЛенинка article `https://cyberleninka.ru/article/n/test` with
+`id_prefix: "cln:"` → `cln:a3f2...` (first 64 hex chars of SHA-256).
+
+## Language detection
+
+Language is auto-detected from the concatenation of `title + " " + abstract`.
+If the ratio of Cyrillic characters exceeds 25%, the paper is tagged `"ru"`.
+Otherwise it defaults to `"en"`.
+
+The YAML `language:` field serves as a **fallback only** — it is used when
+`title` and `abstract` are both empty (common for OAI-PMH records without a
+`dc:description`).
+
+To force a language for all records from a collector, set:
+
+```yaml
+language: ru
+```
+
+## Troubleshooting
+
+### arXiv (type: atom)
+
+**Problem:** Fewer results than `max_results`.
+arXiv imposes a server-side cap of 2000 results per query. Large requests are
+silently truncated. Split into multiple date-ranged queries if you need more.
+
+**Problem:** `403 Forbidden` after many requests.
+arXiv rate-limits aggressive crawlers. Set `rate_limit_secs: 3` or higher.
+
+### CORE (type: core_api)
+
+**Problem:** `HTTP 500` when adding `offset=0`.
+CORE REST API v3 free tier rejects `offset=0`. The collector omits it automatically
+(`page_size: 10`, no offset). Do not add `offset` to `params:`.
+
+**Problem:** Fewer than `page_size` results despite many matching papers.
+CORE uses Elasticsearch under the hood; the free tier caps at 10 per request and
+total result sets are often smaller than the `totalHits` counter suggests.
+CORE is best used as a supplemental source, not primary.
+
+**Problem:** `401 Unauthorized`.
+The `api_key` in `core.yml` has expired or is incorrect. Generate a new key at
+`https://core.ac.uk/` and update `core.yml`.
+
+### КиберЛенинка (type: oai_pmh)
+
+**Problem:** `<record>` elements are invisible / collector returns 0 papers.
+OAI-PMH responses use a default XML namespace (`xmlns="http://..."`). XPath
+queries must use the `oai:` prefix — e.g. `oai:record`, not `record`.
+This is handled internally; do not remove the `oai:` prefix from field XPaths.
+
+**Problem:** `published_date` is missing for some records.
+КиберЛенинка often omits `dc:date`. The collector falls back to the OAI-PMH
+`datestamp` field in the `<header>`. If that too is missing, the date is `NA`.
+
+**Problem:** `max_pages` is ignored and all pages are fetched.
+Set `max_pages:` at the top level of the YAML (not inside `oai:`):
+
+```yaml
+name: cyberleninka
+type: oai_pmh
+max_pages: 10
+```
+
+**Problem:** `oai_from` date filter not working.
+The `oai_from` field maps to the OAI-PMH `from` parameter (ISO-8601 date,
+e.g. `2024-01-01`). Check that the server supports selective harvesting by
+verifying `<granularity>` in the `Identify` response.
+
+### Custom R script (type: r_script)
+
+**Problem:** `collect()` not found.
+The R script must define a function named exactly `collect` (not `Collect`,
+not `fetch_data`). The registry calls `collect(max_results = n)`.
+
+**Problem:** Missing columns cause downstream errors.
+The function must return all 8 standard columns:
+`id, link, title, authors, abstract, categories, published_date, updated_date`.
+Missing columns are not auto-filled — the collector will fail schema validation.
