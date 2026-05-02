@@ -1,0 +1,300 @@
+/* CyberArXiv UI Theme — inspired by MLflow/modern dashboards */
+
+:root {
+  --sidebar-bg: #1b1f2b;
+  --sidebar-fg: #c8cdd8;
+  --sidebar-active: #6366f1;
+  --sidebar-hover: rgba(99, 102, 241, 0.12);
+  --body-bg: #f4f5f7;
+  --card-bg: #ffffff;
+  --card-border: #e5e7eb;
+  --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --card-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --success: #059669;
+  --danger: #dc2626;
+  --warning: #d97706;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  --border-radius: 8px;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+}
+
+/* ---- Global ---- */
+body {
+  background: var(--body-bg) !important;
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ---- Sidebar overrides ---- */
+.bslib-sidebar-layout > .sidebar {
+  background: var(--sidebar-bg) !important;
+  border-right: none !important;
+}
+
+.bslib-sidebar-layout > .sidebar .nav-link {
+  color: var(--sidebar-fg) !important;
+  border-radius: 6px;
+  margin: 2px 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.bslib-sidebar-layout > .sidebar .nav-link:hover {
+  background: var(--sidebar-hover) !important;
+  color: #fff !important;
+}
+
+.bslib-sidebar-layout > .sidebar .nav-link.active {
+  background: var(--sidebar-active) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.bslib-sidebar-layout > .sidebar .sidebar-title {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  padding: 16px 16px 8px;
+}
+
+/* ---- Cards ---- */
+.card, .bslib-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--card-shadow);
+  transition: box-shadow 0.2s ease;
+}
+
+.card:hover, .bslib-card:hover {
+  box-shadow: var(--card-shadow-hover);
+}
+
+.card-header {
+  background: transparent;
+  border-bottom: 1px solid var(--card-border);
+  font-weight: 600;
+  font-size: 14px;
+  padding: 12px 16px;
+}
+
+/* ---- Metric cards ---- */
+.metric-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  box-shadow: var(--card-shadow);
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.metric-card:hover {
+  box-shadow: var(--card-shadow-hover);
+  transform: translateY(-1px);
+}
+
+.metric-card .metric-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.metric-card .metric-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ---- Status badges ---- */
+.status-ok {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.status-fail {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.status-idle {
+  color: var(--text-muted);
+}
+
+/* ---- Log area ---- */
+.log-area {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  padding: 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  border-radius: var(--border-radius);
+  max-height: 360px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  border: 1px solid #313244;
+}
+
+.log-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.log-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.log-area::-webkit-scrollbar-thumb {
+  background: #45475a;
+  border-radius: 3px;
+}
+
+/* ---- Buttons ---- */
+.btn-primary {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  border-radius: 6px;
+  font-weight: 500;
+  padding: 8px 16px;
+  transition: all 0.15s ease;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(79, 70, 229, 0.25);
+}
+
+.btn-success {
+  background: var(--success) !important;
+  border-color: var(--success) !important;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.btn-danger {
+  background: var(--danger) !important;
+  border-color: var(--danger) !important;
+  border-radius: 6px;
+}
+
+.btn-warning {
+  background: var(--warning) !important;
+  border-color: var(--warning) !important;
+  border-radius: 6px;
+  color: #fff !important;
+}
+
+/* ---- Form controls ---- */
+.form-control, .form-select, .selectize-input {
+  border-radius: 6px;
+  border: 1px solid var(--card-border);
+  font-size: 13px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-control:focus, .form-select:focus, .selectize-input.focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+/* ---- Tables (DT) ---- */
+.dataTables_wrapper {
+  font-size: 13px;
+}
+
+table.dataTable thead th {
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+  border-bottom: 2px solid var(--card-border) !important;
+}
+
+table.dataTable tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+table.dataTable tbody tr:hover {
+  background: #f9fafb !important;
+}
+
+/* ---- Tab pills (subtabs) ---- */
+.nav-pills .nav-link {
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  color: var(--text-secondary);
+}
+
+.nav-pills .nav-link.active {
+  background: var(--primary) !important;
+  color: #fff;
+}
+
+/* ---- Section headers ---- */
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+/* ---- Help text ---- */
+.help-block, .shiny-text-output {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ---- Plotly charts ---- */
+.plotly .main-svg {
+  border-radius: var(--border-radius);
+}
+
+/* ---- Scrollbar global ---- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* ---- Responsive adjustments ---- */
+@media (max-width: 768px) {
+  .metric-card .metric-value {
+    font-size: 24px;
+  }
+  .bslib-sidebar-layout > .sidebar {
+    min-width: 200px !important;
+  }
+}
