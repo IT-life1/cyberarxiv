@@ -64,9 +64,9 @@ launch_app <- function(host = "0.0.0.0",
     tags = shiny::tags$head(
       shiny::tags$link(rel = "stylesheet", href = "cyberarxiv-static/style.css"),
       shiny::tags$script(shiny::HTML("
-        $(document).on('click', '.sidebar .nav-link[data-bs-toggle=\"pill\"]', function(e) {
+        $(document).on('click', '.sidebar .nav-link[data-tab]', function(e) {
           e.preventDefault();
-          var target = $(this).attr('href').replace('#', '');
+          var target = $(this).data('tab');
           Shiny.setInputValue('sidebar_nav', target, {priority: 'event'});
           $(this).closest('.nav').find('.nav-link').removeClass('active');
           $(this).addClass('active');
@@ -81,20 +81,13 @@ launch_app <- function(host = "0.0.0.0",
       ),
       width = 220,
       shiny::tags$nav(class = "nav nav-pills flex-column mt-2",
-        shiny::tags$a(class = "nav-link active", `data-bs-toggle` = "pill",
-                      href = "#tab_overview", "Overview"),
-        shiny::tags$a(class = "nav-link", `data-bs-toggle` = "pill",
-                      href = "#tab_etl", "ETL Pipeline"),
-        shiny::tags$a(class = "nav-link", `data-bs-toggle` = "pill",
-                      href = "#tab_papers", "Papers"),
-        shiny::tags$a(class = "nav-link", `data-bs-toggle` = "pill",
-                      href = "#tab_ml", "ML Classifier"),
-        shiny::tags$a(class = "nav-link", `data-bs-toggle` = "pill",
-                      href = "#tab_analytics", "Analytics"),
-        shiny::tags$a(class = "nav-link", `data-bs-toggle` = "pill",
-                      href = "#tab_training", "Training"),
-        shiny::tags$a(class = "nav-link", `data-bs-toggle` = "pill",
-                      href = "#tab_settings", "Settings")
+        shiny::tags$a(class = "nav-link active", href = "#", `data-tab` = "tab_overview", "Overview"),
+        shiny::tags$a(class = "nav-link", href = "#", `data-tab` = "tab_etl", "ETL Pipeline"),
+        shiny::tags$a(class = "nav-link", href = "#", `data-tab` = "tab_papers", "Papers"),
+        shiny::tags$a(class = "nav-link", href = "#", `data-tab` = "tab_ml", "ML Classifier"),
+        shiny::tags$a(class = "nav-link", href = "#", `data-tab` = "tab_analytics", "Analytics"),
+        shiny::tags$a(class = "nav-link", href = "#", `data-tab` = "tab_training", "Training"),
+        shiny::tags$a(class = "nav-link", href = "#", `data-tab` = "tab_settings", "Settings")
       )
     ),
 
