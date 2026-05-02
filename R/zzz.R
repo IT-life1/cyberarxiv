@@ -8,7 +8,7 @@ if (getRversion() >= "2.15.1") {
   utils::globalVariables(
     c("tag", "n", "abstract", "word", "authors",
       "published_month", "published_day", "published_weekday",
-      "n_authors", "percentage", "ml_tag", "ml_confidence", "source", "language")
+      "n_authors", "percentage", "ml_results", "ml_tag", "ml_confidence", "source", "language")
   )
 }
 

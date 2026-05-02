@@ -18,7 +18,7 @@
 #'
 #' @return A data.frame (or tibble if `tibble` installed) with columns:
 #'   paper_id, link, title, authors, abstract, categories,
-#'   published_date, updated_date, ingested_at, tag, ml_tag, ml_confidence, source, language
+#'   published_date, updated_date, ingested_at, tag, ml_results, source, language
 #' @export
 load_publications <- function(db_path = NULL,
                               year = NULL,
@@ -45,24 +45,15 @@ load_publications <- function(db_path = NULL,
     con,
     "SELECT column_name FROM information_schema.columns WHERE table_name = 'papers'"
   )$column_name
-  select_ml_tag  <- if ("ml_tag"        %in% existing_cols) ", ml_tag"        else ", NULL as ml_tag"
-  select_ml_conf <- if ("ml_confidence" %in% existing_cols) ", ml_confidence" else ", NULL as ml_confidence"
-  select_source  <- if ("source"        %in% existing_cols) ", source"        else ", NULL as source"
-  select_language <- if ("language"     %in% existing_cols) ", language"      else ", NULL as language"
-
-  # Per-task ML columns: ml_tag_default, ml_confidence_default, ml_tag_malware, …
-  task_cols <- grep("^ml_tag_|^ml_confidence_", existing_cols, value = TRUE)
-  select_task_cols <- if (length(task_cols) > 0)
-    paste0(", ", paste(task_cols, collapse = ", "))
-  else
-    ""
+  select_ml_results <- if ("ml_results" %in% existing_cols) ", ml_results" else ", NULL as ml_results"
+  select_source  <- if ("source"    %in% existing_cols) ", source"    else ", NULL as source"
+  select_language <- if ("language" %in% existing_cols) ", language"  else ", NULL as language"
 
   sql <- paste0("
     SELECT
       paper_id, link, title, authors, abstract, categories,
       published_date, updated_date, ingested_at, tag",
-      select_ml_tag, select_ml_conf, select_source, select_language,
-      select_task_cols,
+      select_ml_results, select_source, select_language,
     "
     FROM papers
   ")
@@ -136,8 +127,7 @@ load_publications <- function(db_path = NULL,
     updated_date = as.POSIXct(character(0), tz = "UTC"),
     ingested_at = as.POSIXct(character(0), tz = "UTC"),
     tag = character(0),
-    ml_tag = character(0),
-    ml_confidence = numeric(0),
+    ml_results = character(0),
     source = character(0),
     language = character(0),
     stringsAsFactors = FALSE
