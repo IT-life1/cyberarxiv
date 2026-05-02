@@ -45,11 +45,11 @@ launch_app <- function(host = "0.0.0.0",
 
 #' @noRd
 .build_ui <- function(ml_task_choices = c("Общая классификация" = "default")) {
-  css_path <- system.file("www/style.css", package = "cyberarxiv")
-  if (!nzchar(css_path)) css_path <- "inst/www/style.css"
-
-  bslib::page_sidebar(
-    title = "CyberArXiv",
+  bslib::page_navbar(
+    title = shiny::tags$span(
+      shiny::tags$strong("CyberArXiv"),
+      shiny::tags$small(style = "opacity:0.7; margin-left:8px;", "ML Paper Analytics")
+    ),
     theme = bslib::bs_theme(
       version = 5,
       preset = "shiny",
@@ -57,44 +57,16 @@ launch_app <- function(host = "0.0.0.0",
       primary = "#4f46e5", success = "#059669",
       warning = "#d97706", danger = "#dc2626",
       base_font = bslib::font_google("Inter"),
-      code_font = bslib::font_google("JetBrains Mono"),
-      "sidebar-bg" = "#1b1f2b",
-      "sidebar-fg" = "#c8cdd8"
+      code_font = bslib::font_google("JetBrains Mono")
     ),
-    tags = shiny::tags$head(
-      shiny::tags$link(rel = "stylesheet", href = "cyberarxiv-static/style.css"),
-      shiny::tags$script(shiny::HTML("
-        $(document).on('click', '.sidebar .nav-link[data-tab]', function(e) {
-          e.preventDefault();
-          var target = $(this).data('tab');
-          Shiny.setInputValue('sidebar_nav', target, {priority: 'event'});
-          $(this).closest('.nav').find('.nav-link').removeClass('active');
-          $(this).addClass('active');
-        });
-      "))
+    header = shiny::tags$head(
+      shiny::tags$link(rel = "stylesheet", href = "cyberarxiv-static/style.css")
     ),
-    sidebar = bslib::sidebar(
-      title = shiny::tags$span(
-        shiny::tags$strong("CyberArXiv"),
-        shiny::tags$br(),
-        shiny::tags$small(style = "opacity:0.7;font-weight:400;", "ML Paper Analytics")
-      ),
-      width = 220,
-      shiny::tags$nav(class = "nav nav-pills flex-column mt-2",
-        shiny::tags$a(class = "nav-link active", href = "#", `data-tab` = "tab_overview", "Overview"),
-        shiny::tags$a(class = "nav-link", href = "#", `data-tab` = "tab_etl", "ETL Pipeline"),
-        shiny::tags$a(class = "nav-link", href = "#", `data-tab` = "tab_papers", "Papers"),
-        shiny::tags$a(class = "nav-link", href = "#", `data-tab` = "tab_ml", "ML Classifier"),
-        shiny::tags$a(class = "nav-link", href = "#", `data-tab` = "tab_analytics", "Analytics"),
-        shiny::tags$a(class = "nav-link", href = "#", `data-tab` = "tab_training", "Training"),
-        shiny::tags$a(class = "nav-link", href = "#", `data-tab` = "tab_settings", "Settings")
-      )
-    ),
-
-    shiny::tabsetPanel(id = "main_tabs", type = "hidden",
+    bg = "#1b1f2b",
+    inverse = TRUE,
 
       # ---- 1. Overview ----
-      shiny::tabPanelBody(value = "tab_overview",
+    bslib::nav_panel("Overview",
         shiny::fluidRow(
           shiny::column(3, shiny::div(class = "metric-card",
             shiny::div(class = "metric-value", shiny::textOutput("m_total", inline = TRUE)),
@@ -141,7 +113,7 @@ launch_app <- function(host = "0.0.0.0",
       ),
 
       # ---- 2. ETL Pipeline ----
-      shiny::tabPanelBody(value = "tab_etl",
+    bslib::nav_panel("ETL Pipeline",
         shiny::fluidRow(
           shiny::column(4,
             bslib::card(
@@ -180,7 +152,7 @@ launch_app <- function(host = "0.0.0.0",
       ),
 
       # ---- 3. Papers ----
-      shiny::tabPanelBody(value = "tab_papers",
+    bslib::nav_panel("Papers",
         bslib::card(
           bslib::card_body(
             shiny::fluidRow(
@@ -222,7 +194,7 @@ launch_app <- function(host = "0.0.0.0",
       ),
 
       # ---- 4. ML Classifier ----
-      shiny::tabPanelBody(value = "tab_ml",
+    bslib::nav_panel("ML Classifier",
         shiny::fluidRow(
           shiny::column(6,
             bslib::card(
@@ -273,7 +245,7 @@ launch_app <- function(host = "0.0.0.0",
       ),
 
       # ---- 5. Analytics ----
-      shiny::tabPanelBody(value = "tab_analytics",
+    bslib::nav_panel("Analytics",
         shiny::fluidRow(
           shiny::column(3,
             shiny::selectInput("analytics_ml_task", "ML task for analysis:",
@@ -321,7 +293,7 @@ launch_app <- function(host = "0.0.0.0",
       ),
 
       # ---- 6. Training ----
-      shiny::tabPanelBody(value = "tab_training",
+    bslib::nav_panel("Training",
         shiny::tabsetPanel(id = "tr_subtabs", type = "pills",
 
           # 6.1 Configuration
@@ -570,7 +542,7 @@ launch_app <- function(host = "0.0.0.0",
       ),
 
       # ---- 7. Settings ----
-      shiny::tabPanelBody(value = "tab_settings",
+    bslib::nav_panel("Settings",
         bslib::card(
           bslib::card_header("Environment"),
           bslib::card_body(shiny::verbatimTextOutput("settings_info"))
@@ -606,7 +578,6 @@ launch_app <- function(host = "0.0.0.0",
         )
       )
     )
-  )
 }
 
 # ============================================================
@@ -616,11 +587,6 @@ launch_app <- function(host = "0.0.0.0",
 #' @noRd
 .build_server <- function(ml_service_url, init_tasks = NULL, init_choices = NULL) {
   function(input, output, session) {
-
-    # Sidebar navigation → hidden tabset switching
-    shiny::observeEvent(input$sidebar_nav, {
-      shiny::updateTabsetPanel(session, "main_tabs", selected = input$sidebar_nav)
-    })
 
     publications      <- shiny::reactiveVal(NULL)
     etl_log_text      <- shiny::reactiveVal("")
