@@ -750,12 +750,8 @@ launch_app <- function(host = "0.0.0.0",
     output$m_ml <- shiny::renderText({
       df <- publications()
       if (is.null(df) || nrow(df) == 0) return("—")
-      task_cols <- grep("^ml_tag_", names(df), value = TRUE)
-      if (length(task_cols) == 0) return("—")
-      # Статья считается классифицированной если есть хотя бы одна task-колонка с результатом
-      n <- sum(apply(df[, task_cols, drop = FALSE], 1, function(r)
-        any(!is.na(r) & nzchar(r))
-      ))
+      if (!"ml_results" %in% names(df)) return("—")
+      n <- sum(!is.na(df$ml_results) & nzchar(df$ml_results))
       format(n, big.mark = " ")
     })
     output$m_sources <- shiny::renderText({
@@ -915,7 +911,7 @@ launch_app <- function(host = "0.0.0.0",
       df |>
         dplyr::arrange(dplyr::desc(ingested_at)) |>
         dplyr::select(dplyr::any_of(c("paper_id", "title", "source",
-                                      "language", "tag", "ml_tag", "published_date"))) |>
+                                      "language", "tag", "published_date"))) |>
         head(20)
     }, options = list(pageLength = 10, scrollX = TRUE), rownames = FALSE)
 
@@ -945,7 +941,7 @@ launch_app <- function(host = "0.0.0.0",
           choices = c("Все" = "", setNames(tg, tg)))
       }
       # ML-задачи для таблицы
-      task_ids <- sub("^ml_tag_", "", grep("^ml_tag_", names(df), value = TRUE))
+      task_ids <- get_ml_task_ids()
       tasks    <- tryCatch(load_ml_tasks(), error = function(e) list())
       if (length(task_ids) == 0) {
         shiny::updateSelectInput(session, "tbl_ml_task",
@@ -1006,13 +1002,9 @@ launch_app <- function(host = "0.0.0.0",
 
       # Добавить ML-результаты выбранной задачи с понятными именами колонок
       if (nzchar(task_id)) {
-        tag_col  <- paste0("ml_tag_", task_id)
-        conf_col <- paste0("ml_confidence_", task_id)
-        if (tag_col %in% names(df)) {
-          show[[paste0("ML-тег (", task_id, ")")]]  <- df[[tag_col]]
-          if (conf_col %in% names(df))
-            show[[paste0("ML-увер. (", task_id, ")")]] <- round(df[[conf_col]], 3)
-        }
+        df <- .extract_ml_task(df, task_id)
+        show[[paste0("ML-тег (", task_id, ")")]]  <- df$ml_tag
+        show[[paste0("ML-увер. (", task_id, ")")]] <- round(df$ml_confidence, 3)
       }
 
       title_idx <- which(names(show) == "title") - 1L
@@ -1083,13 +1075,11 @@ launch_app <- function(host = "0.0.0.0",
     output$ml_task_col_info <- shiny::renderUI({
       task_id <- trimws(input$ml_task_batch %||% names(ml_task_choices)[1])
       if (!nzchar(task_id)) return(NULL)
-      tag_col  <- paste0("ml_tag_", task_id)
-      conf_col <- paste0("ml_confidence_", task_id)
       shiny::div(
         style = "background:#f0f4f8; border-left:3px solid #00A896; padding:8px 12px; margin-bottom:10px; font-size:12px;",
         shiny::strong("Результат запишется в:"),
         shiny::br(),
-        shiny::code(tag_col), " · ", shiny::code(conf_col)
+        shiny::code(paste0("ml_results.", task_id))
       )
     })
 
@@ -1103,8 +1093,6 @@ launch_app <- function(host = "0.0.0.0",
       }
       task_id   <- trimws(input$ml_task_batch %||% names(ml_task_choices)[1])
       lang_mdls <- (ml_tasks_info[[task_id]]$models) %||% list(en = "best_model")
-      task_col  <- paste0("ml_tag_", task_id)
-
       pubs <- publications()
       if (is.null(pubs) || nrow(pubs) == 0) {
         ml_log_text("База данных пустая. Сначала запусти ETL."); return()
@@ -1113,8 +1101,9 @@ launch_app <- function(host = "0.0.0.0",
       df <- pubs
       df$id <- df$paper_id
 
-      if (only_new && task_col %in% names(df)) {
-        df <- df[is.na(df[[task_col]]), , drop = FALSE]
+      if (only_new) {
+        df <- .extract_ml_task(df, task_id)
+        df <- df[is.na(df$ml_tag), , drop = FALSE]
       }
 
       if (nrow(df) == 0) {
@@ -1288,13 +1277,12 @@ launch_app <- function(host = "0.0.0.0",
     output$cross_tab <- DT::renderDT({
       df      <- publications()
       task_id <- trimws(input$analytics_ml_task %||% "")
-      tag_col <- paste0("ml_tag_", task_id)
       if (is.null(df) || nrow(df) == 0 || !"tag" %in% names(df)) return(NULL)
-      if (!nzchar(task_id) || !tag_col %in% names(df)) return(NULL)
-      ml_vals <- df[[tag_col]]
-      sub <- df[!is.na(df$tag) & !is.na(ml_vals) & nzchar(ml_vals), , drop = FALSE]
+      if (!nzchar(task_id)) return(NULL)
+      df <- .extract_ml_task(df, task_id)
+      sub <- df[!is.na(df$tag) & !is.na(df$ml_tag) & nzchar(df$ml_tag), , drop = FALSE]
       if (nrow(sub) == 0) return(NULL)
-      tab <- as.data.frame.matrix(table(sub$tag, sub[[tag_col]]))
+      tab <- as.data.frame.matrix(table(sub$tag, sub$ml_tag))
       tab$keyword_tag <- rownames(tab)
       tab <- tab[, c("keyword_tag", setdiff(names(tab), "keyword_tag"))]
       DT::datatable(tab, rownames = FALSE,
@@ -1332,14 +1320,13 @@ launch_app <- function(host = "0.0.0.0",
     output$plot_conf_by_tag <- plotly::renderPlotly({
       df       <- publications()
       task_id  <- trimws(input$analytics_ml_task %||% "")
-      conf_col <- paste0("ml_confidence_", task_id)
-      if (is.null(df) || nrow(df) == 0 || !nzchar(task_id) ||
-          !"tag" %in% names(df) || !conf_col %in% names(df))
+      if (is.null(df) || nrow(df) == 0 || !nzchar(task_id) || !"tag" %in% names(df))
         return(plotly::plot_ly() |> plotly::layout(title = "Нет ML-данных"))
+      df <- .extract_ml_task(df, task_id)
       avg <- df |>
-        dplyr::filter(!is.na(tag), !is.na(.data[[conf_col]])) |>
+        dplyr::filter(!is.na(tag), !is.na(ml_confidence)) |>
         dplyr::group_by(tag) |>
-        dplyr::summarise(avg_conf = mean(.data[[conf_col]], na.rm = TRUE),
+        dplyr::summarise(avg_conf = mean(ml_confidence, na.rm = TRUE),
                          n = dplyr::n(), .groups = "drop") |>
         dplyr::arrange(dplyr::desc(avg_conf)) |>
         head(15)
@@ -1357,13 +1344,15 @@ launch_app <- function(host = "0.0.0.0",
     output$plot_ml_coverage <- plotly::renderPlotly({
       df      <- publications()
       task_id <- trimws(input$analytics_ml_task %||% "")
-      tag_col <- paste0("ml_tag_", task_id)
       if (is.null(df) || nrow(df) == 0)
         return(plotly::plot_ly() |> plotly::layout(title = "Нет данных"))
       has_kw <- !is.na(df$tag) & nzchar(df$tag)
-      has_ml <- if (nzchar(task_id) && tag_col %in% names(df))
-        !is.na(df[[tag_col]]) & nzchar(df[[tag_col]])
-      else rep(FALSE, nrow(df))
+      if (nzchar(task_id)) {
+        df <- .extract_ml_task(df, task_id)
+        has_ml <- !is.na(df$ml_tag) & nzchar(df$ml_tag)
+      } else {
+        has_ml <- rep(FALSE, nrow(df))
+      }
       cov <- data.frame(
         group = c("Keyword + ML", "Только keyword", "Без тегов"),
         n     = c(sum(has_kw & has_ml), sum(has_kw & !has_ml), sum(!has_kw)),
@@ -1382,7 +1371,7 @@ launch_app <- function(host = "0.0.0.0",
     shiny::observe({
       df <- publications()
       if (is.null(df) || nrow(df) == 0) return()
-      task_ids <- sub("^ml_tag_", "", grep("^ml_tag_", names(df), value = TRUE))
+      task_ids <- get_ml_task_ids()
       if (length(task_ids) == 0) {
         shiny::updateSelectInput(session, "analytics_ml_task",
                                  choices = c("(нет ML-данных)" = ""), selected = "")
@@ -1401,10 +1390,10 @@ launch_app <- function(host = "0.0.0.0",
     output$plot_ml_conf <- plotly::renderPlotly({
       df      <- publications()
       task_id <- trimws(input$analytics_ml_task %||% "")
-      conf_col <- paste0("ml_confidence_", task_id)
-      if (is.null(df) || nrow(df) == 0 || !nzchar(task_id) || !conf_col %in% names(df))
+      if (is.null(df) || nrow(df) == 0 || !nzchar(task_id))
         return(plotly::plot_ly() |> plotly::layout(title = "Нет данных"))
-      conf <- as.numeric(df[[conf_col]])
+      df <- .extract_ml_task(df, task_id)
+      conf <- as.numeric(df$ml_confidence)
       conf <- conf[!is.na(conf)]
       if (length(conf) == 0)
         return(plotly::plot_ly() |> plotly::layout(title = "Нет ML-данных для этой задачи"))
@@ -1418,7 +1407,6 @@ launch_app <- function(host = "0.0.0.0",
     output$plot_tag_comparison <- plotly::renderPlotly({
       df      <- publications()
       task_id <- trimws(input$analytics_ml_task %||% "")
-      tag_col <- paste0("ml_tag_", task_id)
       if (is.null(df) || nrow(df) == 0 || !"tag" %in% names(df))
         return(plotly::plot_ly() |> plotly::layout(title = "Нет данных"))
       kw <- df |>
@@ -1427,14 +1415,14 @@ launch_app <- function(host = "0.0.0.0",
         head(15) |>
         dplyr::rename(category = tag) |>
         dplyr::mutate(type = "Keyword")
-      has_ml <- nzchar(task_id) && tag_col %in% names(df) &&
-                any(!is.na(df[[tag_col]]) & nzchar(df[[tag_col]]))
+      df <- .extract_ml_task(df, task_id)
+      has_ml <- nzchar(task_id) &&
+                any(!is.na(df$ml_tag) & nzchar(df$ml_tag))
       if (has_ml) {
-        ml_vals <- df[[tag_col]]
-        ml <- df[!is.na(ml_vals) & nzchar(ml_vals), ] |>
-          dplyr::count(.data[[tag_col]], sort = TRUE) |>
+        ml <- df[!is.na(df$ml_tag) & nzchar(df$ml_tag), ] |>
+          dplyr::count(ml_tag, sort = TRUE) |>
           head(15) |>
-          dplyr::rename(category = dplyr::all_of(tag_col)) |>
+          dplyr::rename(category = ml_tag) |>
           dplyr::mutate(type = paste0("ML (", task_id, ")"))
         combined <- rbind(kw, ml)
       } else {
