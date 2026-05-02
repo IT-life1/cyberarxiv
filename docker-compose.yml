@@ -86,3 +86,24 @@ services:
       timeout: 5s
       retries: 3
       start_period: 60s
+
+  # ============================================================
+  # MCP Server (AI assistant interface)
+  # ============================================================
+  cyberarxiv-mcp:
+    build:
+      context: .
+      dockerfile: mcp_server/Dockerfile
+    container_name: cyberarxiv-mcp
+    restart: unless-stopped
+    environment:
+      - CYBERARXIV_DB_PATH=/data/cyberarxiv.duckdb
+      - ML_SERVICE_URL=http://cyberarxiv-ml:5001
+      - ML_DEFAULT_MODEL=best_model
+    volumes:
+      - ./data:/data
+    stdin_open: true
+    tty: true
+    depends_on:
+      cyberarxiv-ml:
+        condition: service_healthy
