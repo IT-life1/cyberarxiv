@@ -48,34 +48,39 @@
       updated_date    TIMESTAMP,
       ingested_at     TIMESTAMP DEFAULT now(),
       tag             VARCHAR,
-      ml_tag          VARCHAR,
-      ml_confidence   DOUBLE,
+      ml_results      VARCHAR,
       source          VARCHAR,
       language        VARCHAR
     );
   ")
 
-  # Migration: add columns that may be missing in older databases
   existing_cols <- DBI::dbGetQuery(
     con,
     "SELECT column_name FROM information_schema.columns WHERE table_name = 'papers'"
   )$column_name
 
-  if (!"ml_tag" %in% existing_cols)
-    DBI::dbExecute(con, "ALTER TABLE papers ADD COLUMN ml_tag VARCHAR;")
+  # Migration: add ml_results if missing
+  if (!"ml_results" %in% existing_cols)
+    DBI::dbExecute(con, "ALTER TABLE papers ADD COLUMN ml_results VARCHAR;")
 
-  if (!"ml_confidence" %in% existing_cols)
-    DBI::dbExecute(con, "ALTER TABLE papers ADD COLUMN ml_confidence DOUBLE;")
+  # Migration: drop old fixed ML columns
+  for (col in c("ml_tag", "ml_confidence")) {
+    if (col %in% existing_cols)
+      DBI::dbExecute(con, paste0("ALTER TABLE papers DROP COLUMN ", col, ";"))
+  }
+
+  # Migration: drop old dynamic ml_tag_*/ml_confidence_* columns
+  old_ml <- grep("^ml_tag_|^ml_confidence_", existing_cols, value = TRUE)
+  for (col in old_ml)
+    DBI::dbExecute(con, paste0("ALTER TABLE papers DROP COLUMN ", col, ";"))
 
   if (!"source" %in% existing_cols) {
     DBI::dbExecute(con, "ALTER TABLE papers ADD COLUMN source VARCHAR;")
-    # Tag existing rows as 'arxiv' — the only source that existed before this migration
     DBI::dbExecute(con, "UPDATE papers SET source = 'arxiv' WHERE source IS NULL;")
   }
 
   if (!"language" %in% existing_cols) {
     DBI::dbExecute(con, "ALTER TABLE papers ADD COLUMN language VARCHAR;")
-    # Existing rows are all arXiv (English)
     DBI::dbExecute(con, "UPDATE papers SET language = 'en' WHERE language IS NULL;")
   }
 
@@ -83,34 +88,11 @@
   DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_papers_published ON papers(published_date);")
   DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_papers_updated ON papers(updated_date);")
   DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_papers_tag ON papers(tag);")
-  DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_papers_ml_tag ON papers(ml_tag);")
   DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_papers_source ON papers(source);")
   DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_papers_language ON papers(language);")
 }
 
-#' Add ml_tag_{task_id} and ml_confidence_{task_id} columns if they don't exist
-#' @noRd
-ensure_ml_task_columns <- function(con, task_id) {
-  if (!grepl("^[A-Za-z0-9_]+$", task_id))
-    stop("task_id must be snake_case (letters, digits, underscores only)")
-
-  existing <- DBI::dbGetQuery(
-    con,
-    "SELECT column_name FROM information_schema.columns WHERE table_name = 'papers'"
-  )$column_name
-
-  tag_col  <- paste0("ml_tag_", task_id)
-  conf_col <- paste0("ml_confidence_", task_id)
-
-  if (!tag_col %in% existing)
-    DBI::dbExecute(con, paste0("ALTER TABLE papers ADD COLUMN ", tag_col, " VARCHAR;"))
-  if (!conf_col %in% existing)
-    DBI::dbExecute(con, paste0("ALTER TABLE papers ADD COLUMN ", conf_col, " DOUBLE;"))
-
-  invisible(NULL)
-}
-
-#' Return task IDs that have result columns in the papers table
+#' Return task IDs that have ML results in the papers table
 #'
 #' @param db_path Path to DuckDB file (default: resolved via env/option).
 #' @return Character vector of task IDs, e.g. c("default", "malware").
@@ -122,10 +104,12 @@ get_ml_task_ids <- function(db_path = NULL) {
   con <- DBI::dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = TRUE)
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
 
-  cols <- DBI::dbGetQuery(
-    con,
-    "SELECT column_name FROM information_schema.columns WHERE table_name = 'papers'"
-  )$column_name
+  if (!("papers" %in% DBI::dbListTables(con))) return(character(0))
 
-  sub("^ml_tag_", "", grep("^ml_tag_", cols, value = TRUE))
+  tryCatch({
+    DBI::dbGetQuery(con,
+      "SELECT DISTINCT unnest(json_keys(ml_results)) AS task_id
+       FROM papers WHERE ml_results IS NOT NULL"
+    )$task_id
+  }, error = function(e) character(0))
 }
