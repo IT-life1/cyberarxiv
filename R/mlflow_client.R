@@ -44,7 +44,7 @@ list_ml_models <- function(ml_service_url = NULL) {
 #'
 #' @examples
 #' \dontrun{
-#' papers <- load_raw_data()
+#' papers <- load_publications()
 #' ml_results <- classify_with_ml(papers)
 #' ml_results <- classify_with_ml(papers, model = "malware")
 #' }
@@ -154,15 +154,14 @@ classify_with_ml <- function(data, model = NULL, ml_service_url = NULL, batch_si
 
 #' Update ML tags in the database
 #'
-#' Takes ML classification results and writes them to task-specific columns
-#' (\code{ml_tag_<task_id>} and \code{ml_confidence_<task_id>}). Columns are
-#' created automatically on first use. Results from different tasks never
-#' overwrite each other.
+#' Takes ML classification results and merges them into the \code{ml_results}
+#' JSON column under the key given by \code{task_id}. Results from different
+#' tasks never overwrite each other.
 #'
 #' @param ml_results data.frame with columns `id`, `ml_tag`, `ml_confidence`
 #'   as returned by `classify_with_ml()`
 #' @param task_id Task identifier matching a key in \code{inst/ml_tasks.yml}
-#'   (default: \code{"default"}). Determines which columns are written.
+#'   (default: \code{"default"}).
 #' @param db_path optional path to duckdb file
 #'
 #' @return invisible list with update count
@@ -186,11 +185,6 @@ update_ml_tags <- function(ml_results, task_id = "default", db_path = NULL) {
   con <- .cyberarxiv_connect(db_path)
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
 
-  tag_col  <- paste0("ml_tag_", task_id)
-  conf_col <- paste0("ml_confidence_", task_id)
-
-  ensure_ml_task_columns(con, task_id)
-
   stage_df <- data.frame(
     paper_id      = as.character(ml_results$id),
     ml_tag        = as.character(ml_results$ml_tag),
@@ -206,17 +200,22 @@ update_ml_tags <- function(ml_results, task_id = "default", db_path = NULL) {
   updated <- tryCatch({
     DBI::dbWriteTable(con, "stg_ml_tags", stage_df, overwrite = TRUE)
 
-    n <- DBI::dbExecute(con, sprintf("
+    sql <- sprintf("
       UPDATE papers AS p
-      SET
-        %s = s.ml_tag,
-        %s = s.ml_confidence
+      SET ml_results = json_merge_patch(
+        COALESCE(p.ml_results, '{}'),
+        json_object('%s', json_object(
+          'tag', s.ml_tag,
+          'confidence', CAST(s.ml_confidence AS DOUBLE)
+        ))
+      )
       FROM stg_ml_tags AS s
       WHERE p.paper_id = s.paper_id
         AND s.paper_id IS NOT NULL
         AND s.paper_id <> '';
-    ", tag_col, conf_col))
+    ", task_id)
 
+    n <- DBI::dbExecute(con, sql)
     DBI::dbExecute(con, "DROP TABLE IF EXISTS stg_ml_tags;")
     DBI::dbExecute(con, "COMMIT;")
     n
@@ -226,6 +225,35 @@ update_ml_tags <- function(ml_results, task_id = "default", db_path = NULL) {
   })
 
   invisible(list(updated = as.integer(updated)))
+}
+
+#' Extract ML tag and confidence for a specific task from the ml_results JSON column
+#'
+#' @param df data.frame with an \code{ml_results} character column
+#' @param task_id Task identifier (e.g. \code{"default"}, \code{"malware"})
+#' @return The input data.frame with added \code{ml_tag} (character) and
+#'   \code{ml_confidence} (numeric) columns.
+#' @noRd
+.extract_ml_task <- function(df, task_id) {
+  if (!"ml_results" %in% names(df) || nrow(df) == 0L) {
+    df$ml_tag <- NA_character_
+    df$ml_confidence <- NA_real_
+    return(df)
+  }
+  parsed <- lapply(df$ml_results, function(x) {
+    if (is.na(x) || !nzchar(x))
+      return(list(tag = NA_character_, confidence = NA_real_))
+    r <- tryCatch(jsonlite::fromJSON(x), error = function(e) NULL)
+    if (is.null(r) || !task_id %in% names(r))
+      return(list(tag = NA_character_, confidence = NA_real_))
+    list(
+      tag = as.character(r[[task_id]]$tag %||% NA_character_),
+      confidence = as.numeric(r[[task_id]]$confidence %||% NA_real_)
+    )
+  })
+  df$ml_tag        <- vapply(parsed, `[[`, character(1), "tag")
+  df$ml_confidence <- vapply(parsed, `[[`, numeric(1),   "confidence")
+  df
 }
 
 #' Check if ML service is healthy
