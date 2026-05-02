@@ -50,6 +50,14 @@ DEFAULT_LLM = {
     "concurrency": 4,
 }
 
+# Provider presets: provider_id → (label, default_base_url, example_model)
+PROVIDER_PRESETS = {
+    "openai": ("OpenAI", "", "gpt-4o-mini"),
+    "grok": ("xAI Grok", "https://api.x.ai/v1", "grok-3-mini"),
+    "deepseek": ("DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat"),
+    "other": ("Other (OpenAI-compatible)", "", ""),
+}
+
 DEFAULT_CONFIG: Dict[str, Any] = {
     "classes": DEFAULT_CLASSES,
     "system_prompt": DEFAULT_SYSTEM_PROMPT,

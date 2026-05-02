@@ -444,7 +444,7 @@ async def training_health():
         },
         "config_path": str(config_path()),
         "config_writable": False,
-        "sdks": {"openai": False, "anthropic": False},
+        "sdks": {"openai": False},
         "errors": [],
     }
     try:
@@ -457,7 +457,7 @@ async def training_health():
     except Exception as e:
         info["ok"] = False
         info["errors"].append(f"config dir not writable: {e}")
-    for sdk in ("openai", "anthropic"):
+    for sdk in ("openai",):
         try:
             __import__(sdk)
             info["sdks"][sdk] = True

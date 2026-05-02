@@ -47,6 +47,11 @@ services:
       - MLFLOW_TRACKING_URI=http://cyberarxiv-mlflow:5000
       - TRAINING_DATA_DIR=/srv/cyberarxiv-ml/training_data
       - MODELS_DIR=/srv/cyberarxiv-ml/models
+      # LLM for training data labeling (env vars override UI config)
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_BASE_URL=${LLM_BASE_URL:-}
     ports:
       - "5001:5001"
     volumes:

@@ -86,17 +86,29 @@ training_data/
 | `POST /training/jobs/{id}/cancel` | `job_store.update(status='cancelled')` |
 | `GET /training/files/{cat}` | `os.listdir()` поверх `paths.<cat>_dir()` |
 | `GET /training/files/{cat}/{name}` | `FileResponse` |
-| `GET /training/health` | проверка writable + import openai/anthropic |
+| `GET /training/health` | проверка writable + import openai |
 
 ## Поддерживаемые LLM-провайдеры
 
-`llm_labeler.py` строит клиента в зависимости от `provider`:
+Все провайдеры используют единый OpenAI-совместимый SDK (`openai>=1.40`). Выбор провайдера определяет только `base_url` по умолчанию:
 
-| `provider` | SDK | Дефолт `base_url` | Примеры моделей |
-|---|---|---|---|
-| `openai` | `openai>=1.40` | sdk default | `gpt-4o-mini`, `gpt-4o` |
-| `anthropic` | `anthropic>=0.40` | sdk default | `claude-haiku-4-5-20251001`, `claude-sonnet-4-6` |
-| `grok` | `openai>=1.40` (compat) | `https://api.x.ai/v1` | `grok-3`, `grok-3-mini`, `grok-4` |
+| `provider` | Дефолт `base_url` | Примеры моделей |
+|---|---|---|
+| `openai` | (SDK default) | `gpt-4o-mini`, `gpt-4o` |
+| `grok` | `https://api.x.ai/v1` | `grok-3`, `grok-3-mini` |
+| `deepseek` | `https://api.deepseek.com/v1` | `deepseek-chat`, `deepseek-reasoner` |
+| `other` | (пользователь задаёт) | любая OpenAI-compatible модель |
+
+### Environment variables
+
+Переменные окружения имеют приоритет над конфигом в UI:
+
+| Variable | Описание | Пример |
+|---|---|---|
+| `LLM_API_KEY` | API-ключ | `sk-...` |
+| `LLM_MODEL` | Имя модели | `gpt-4o-mini` |
+| `LLM_BASE_URL` | Base URL эндпоинта | `https://api.deepseek.com/v1` |
+| `LLM_PROVIDER` | Провайдер (для логирования) | `deepseek` |
 
 `_normalize_base_url()` обрезает случайно введённые суффиксы (`/chat/completions`, `/responses`, `/v1/responses`) — пользователь не должен думать об этом.
 

@@ -1,10 +1,10 @@
 """LLM-driven dataset labeling.
 
-Supports three providers behind a single interface:
-  - openai      uses the OpenAI SDK (works for OpenAI, DeepSeek, OpenRouter,
-                local OpenAI-compatible servers — driven by `base_url`).
-  - anthropic   uses the Anthropic SDK (Claude models).
-  - grok        uses the OpenAI SDK pointed at https://api.x.ai/v1.
+All providers use the OpenAI-compatible SDK interface. Built-in presets:
+  - openai      OpenAI API (default base_url)
+  - grok        xAI Grok via https://api.x.ai/v1
+  - deepseek    DeepSeek via https://api.deepseek.com/v1
+  - other       Any OpenAI-compatible endpoint (user provides base_url)
 
 Labeling contract: the model gets a system prompt + a user prompt assembled
 from the user's template, and is expected to return ONLY a category name from
@@ -13,10 +13,17 @@ matching against the taxonomy. Anything we can't match collapses to "other".
 
 The labeler is deliberately conservative about errors — a single bad LLM call
 should not abort an 8-hour 70k-row run.
+
+Environment variables (override config when set):
+  - LLM_API_KEY       API key for the LLM provider
+  - LLM_MODEL         Model name (e.g. gpt-4o-mini, deepseek-chat)
+  - LLM_BASE_URL      Base URL for the API endpoint
+  - LLM_PROVIDER      Provider preset (openai, grok, deepseek, other)
 """
 from __future__ import annotations
 
 import logging
+import os
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -37,8 +44,8 @@ class LLMError(Exception):
 # ── Provider clients ──────────────────────────────────────────────────────
 
 
-class _OpenAILike:
-    """Wrapper for OpenAI-compatible APIs (OpenAI, Grok, DeepSeek, ...)."""
+class _OpenAIClient:
+    """Universal client for all OpenAI-compatible APIs."""
 
     def __init__(self, api_key: str, model: str, base_url: Optional[str] = None,
                  timeout: int = 60):
@@ -53,7 +60,6 @@ class _OpenAILike:
             kwargs["base_url"] = base_url
         self._client = OpenAI(**kwargs)
         self._model = model
-        self._timeout = timeout
 
     def complete(self, system: str, user: str, *, temperature: float = 0.0,
                  max_tokens: int = 32) -> str:
@@ -69,41 +75,6 @@ class _OpenAILike:
         choice = resp.choices[0]
         content = choice.message.content or ""
         return content.strip()
-
-
-class _Anthropic:
-    """Wrapper for Anthropic SDK (Claude)."""
-
-    def __init__(self, api_key: str, model: str, base_url: Optional[str] = None,
-                 timeout: int = 60):
-        try:
-            from anthropic import Anthropic  # type: ignore
-        except ImportError as e:
-            raise LLMError(
-                "anthropic SDK not installed. `pip install anthropic>=0.40.0`"
-            ) from e
-        kwargs = {"api_key": api_key, "timeout": timeout}
-        if base_url:
-            kwargs["base_url"] = base_url
-        self._client = Anthropic(**kwargs)
-        self._model = model
-
-    def complete(self, system: str, user: str, *, temperature: float = 0.0,
-                 max_tokens: int = 32) -> str:
-        resp = self._client.messages.create(
-            model=self._model,
-            max_tokens=max(8, max_tokens),
-            temperature=temperature,
-            system=system,
-            messages=[{"role": "user", "content": user}],
-        )
-        # Concat all text blocks
-        parts = []
-        for block in resp.content:
-            t = getattr(block, "text", None)
-            if t:
-                parts.append(t)
-        return "".join(parts).strip()
 
 
 def _normalize_base_url(url: str) -> str:
@@ -124,25 +95,30 @@ def _normalize_base_url(url: str) -> str:
     return u
 
 
+# Provider → default base_url mapping. Empty string means use SDK default (OpenAI).
+PROVIDER_BASE_URLS: Dict[str, str] = {
+    "openai": "",
+    "grok": "https://api.x.ai/v1",
+    "deepseek": "https://api.deepseek.com/v1",
+    "other": "",  # user must supply base_url
+}
+
+
 def _build_client(provider: str, api_key: str, model: str, base_url: str,
                   timeout: int):
-    provider = (provider or "").lower().strip()
+    provider = (provider or "openai").lower().strip()
     base_url = _normalize_base_url(base_url)
-    if provider == "openai":
-        return _OpenAILike(api_key=api_key, model=model,
-                           base_url=base_url or None, timeout=timeout)
-    if provider == "grok":
-        return _OpenAILike(
-            api_key=api_key,
-            model=model,
-            base_url=base_url or "https://api.x.ai/v1",
-            timeout=timeout,
-        )
-    if provider == "anthropic":
-        return _Anthropic(api_key=api_key, model=model,
-                          base_url=base_url or None, timeout=timeout)
-    raise LLMError(f"Unknown LLM provider: '{provider}'. "
-                   "Use one of: openai, anthropic, grok.")
+
+    # If no explicit base_url, use provider default
+    if not base_url:
+        base_url = PROVIDER_BASE_URLS.get(provider, "")
+
+    return _OpenAIClient(
+        api_key=api_key,
+        model=model,
+        base_url=base_url or None,
+        timeout=timeout,
+    )
 
 
 # ── Tag normalisation ─────────────────────────────────────────────────────
@@ -194,17 +170,21 @@ def label_dataframe(
         raise ValueError(f"DataFrame missing columns: {missing}")
 
     llm_cfg = cfg.get("llm", {})
-    provider = llm_cfg.get("provider", "openai")
-    model = llm_cfg.get("model", "gpt-4o-mini")
-    api_key = llm_cfg.get("api_key", "") or ""
-    base_url = llm_cfg.get("base_url", "") or ""
+    # Environment variables take precedence over saved config
+    provider = os.environ.get("LLM_PROVIDER") or llm_cfg.get("provider", "openai")
+    model = os.environ.get("LLM_MODEL") or llm_cfg.get("model", "gpt-4o-mini")
+    api_key = os.environ.get("LLM_API_KEY") or llm_cfg.get("api_key", "") or ""
+    base_url = os.environ.get("LLM_BASE_URL") or llm_cfg.get("base_url", "") or ""
     temperature = float(llm_cfg.get("temperature", 0.0) or 0.0)
     max_tokens = int(llm_cfg.get("max_tokens", 32) or 32)
     timeout = int(llm_cfg.get("request_timeout_secs", 60) or 60)
     concurrency = max(1, int(llm_cfg.get("concurrency", 4) or 4))
 
     if not api_key:
-        raise LLMError("LLM api_key is empty. Set it in the Training tab first.")
+        raise LLMError(
+            "LLM api_key is empty. Set it in the Training tab, "
+            "or pass via LLM_API_KEY environment variable."
+        )
 
     classes = class_names(cfg)
     if not classes:

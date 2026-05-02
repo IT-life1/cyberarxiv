@@ -339,11 +339,12 @@ launch_app <- function(host = "0.0.0.0",
               shiny::column(3,
                 shiny::selectInput("tr_llm_provider", "Провайдер:",
                                    choices = c("OpenAI" = "openai",
-                                               "Anthropic (Claude)" = "anthropic",
-                                               "xAI Grok" = "grok"),
+                                               "xAI Grok" = "grok",
+                                               "DeepSeek" = "deepseek",
+                                               "Other (OpenAI-compatible)" = "other"),
                                    selected = "openai"),
                 shiny::textInput("tr_llm_model", "Модель:", value = "gpt-4o-mini",
-                                 placeholder = "gpt-4o-mini / claude-sonnet-4-6 / grok-4")
+                                 placeholder = "gpt-4o-mini / grok-3-mini / deepseek-chat")
               ),
               shiny::column(3,
                 shiny::passwordInput("tr_llm_api_key", "API key:",
@@ -1617,6 +1618,22 @@ launch_app <- function(host = "0.0.0.0",
       }, error = function(e) paste("transport error:", conditionMessage(e)))
       output$tr_health_info <- shiny::renderText(txt)
     })
+
+    shiny::observeEvent(input$tr_llm_provider, {
+      provider_urls <- list(
+        openai = "", grok = "https://api.x.ai/v1",
+        deepseek = "https://api.deepseek.com/v1", other = ""
+      )
+      provider_models <- list(
+        openai = "gpt-4o-mini", grok = "grok-3-mini",
+        deepseek = "deepseek-chat", other = ""
+      )
+      prov <- input$tr_llm_provider
+      shiny::updateTextInput(session, "tr_llm_base_url",
+                             value = provider_urls[[prov]] %||% "")
+      shiny::updateTextInput(session, "tr_llm_model",
+                             value = provider_models[[prov]] %||% "")
+    }, ignoreInit = TRUE)
 
     shiny::observeEvent(input$btn_tr_llm_save, {
       llm <- list(
