@@ -41,7 +41,7 @@ else
 fi
 
 # UI_MODE can be "dashboard" (Quarto, default) or "shiny" (interactive GUI)
-UI_MODE="${UI_MODE:-dashboard}"
+UI_MODE="${UI_MODE:-shiny}"
 if [ "$UI_MODE" = "shiny" ]; then
   log "Starting Shiny GUI (UI_MODE=shiny) on port 3838"
   exec Rscript /srv/cyberarxiv/docker/run_shiny.R 2>&1
