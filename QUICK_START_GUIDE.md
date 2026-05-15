@@ -146,6 +146,8 @@ docker compose up -d
 docker compose logs -f cyberarxiv
 ```
 
+Данные сохраняются в `./data`, `./mlflow`, `./models` и `./training_data`.
+
 ## 5. Доступ к сервисам
 
 | Сервис | URL |
@@ -170,15 +172,8 @@ chmod +x start-mlflow.sh```
 
 В терминале запускаем:
 
-```nohup ./start-mlflow.sh > mlflow.log 2>&1 &```
-
-## Остановка
-
-```bash
-docker compose down
+```nohup ./start-mlflow.sh > mlflow.log 2>&1 &
 ```
-
-Данные сохраняются в `./data`, `./mlflow`, `./models` и `./training_data`.
 
 ## Обновление до последних образов
 
