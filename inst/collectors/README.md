@@ -167,6 +167,41 @@ field_map:
 
 If a field is not found in the response, the value is set to `NA` (not an error).
 
+## Environment variable interpolation
+
+Any string field in a YAML spec can reference an env var with docker-compose-style
+syntax. Substitution happens once when the spec is loaded (`.load_collector_spec`
+in `R/collector_registry.R`).
+
+| Syntax | Meaning |
+|---|---|
+| `${VAR}` | Replaced with `Sys.getenv("VAR")`, or empty string if unset. |
+| `${VAR:-default}` | Replaced with `Sys.getenv("VAR")`, or `default` if unset/empty. |
+
+If a variable is referenced without a default and isn't set in the environment,
+a warning is emitted at load time (the field resolves to `""`, so the collector
+will likely fail at request time with 401/403).
+
+The built-in `core.yml` uses this pattern for its API token:
+
+```yaml
+auth:
+  type: bearer
+  token: "${CORE_API_KEY}"
+```
+
+Export the variable before starting R or `docker compose up`:
+
+```bash
+export CORE_API_KEY=...
+docker compose up -d                # docker-compose.yml passes it through
+# or, outside Docker:
+CORE_API_KEY=... R -e 'cyberarxiv::collect_all()'
+```
+
+To add a new secret-bearing collector, point at it from YAML and pass the
+matching env var through `docker-compose.yml` (`SECRET=${SECRET:-}`).
+
 ## Discovery order
 
 1. Built-in: `inst/collectors/` (package defaults)
@@ -231,8 +266,17 @@ total result sets are often smaller than the `totalHits` counter suggests.
 CORE is best used as a supplemental source, not primary.
 
 **Problem:** `401 Unauthorized`.
-The `auth.token` in `core.yml` has expired or is incorrect. Generate a new key at
-`https://core.ac.uk/` and update `core.yml`.
+The `CORE_API_KEY` env var is unset, empty, or holds an expired token. Generate
+a new key at `https://core.ac.uk/services/api`, then:
+
+- Outside Docker: `export CORE_API_KEY=...` before launching R.
+- In Docker: export it on the host before `docker compose up` (the compose file
+  already passes it through as `${CORE_API_KEY:-}`), or add it to a `.env` file
+  next to `docker-compose.yml`.
+
+If you see a warning at startup like `Collector 'core': env var(s) referenced
+in YAML but not set in the environment: CORE_API_KEY`, that's the same issue —
+the key wasn't visible to the process.
 
 ### КиберЛенинка (type: oai_pmh)
 

@@ -30,6 +30,61 @@
   unique(dirs)
 }
 
+# ── Env-var interpolation ─────────────────────────────────────────────────────
+
+# Substitute `${VAR}` / `${VAR:-default}` placeholders in spec strings with
+# values from the process environment. Same syntax as docker-compose, so
+# secrets can be injected without baking them into the YAML.
+#
+# Behaviour:
+#   ${VAR}             → Sys.getenv("VAR")                 (or "" if unset)
+#   ${VAR:-default}    → Sys.getenv("VAR") or "default"    (default if unset/empty)
+#
+# Unset variables without a default trigger a warning at load time so users
+# notice their secret wasn't applied instead of debugging a 401 later.
+
+#' @noRd
+.interpolate_string <- function(s, missing_vars) {
+  if (is.null(s) || is.na(s) || !nzchar(s)) return(s)
+  pattern <- "\\$\\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\\}"
+  result <- ""
+  m <- regexpr(pattern, s, perl = TRUE)
+  while (m != -1L) {
+    full_start <- m
+    full_end <- m + attr(m, "match.length") - 1L
+    cs <- attr(m, "capture.start")
+    cl <- attr(m, "capture.length")
+    var_name <- substr(s, cs[1L], cs[1L] + cl[1L] - 1L)
+    # R's regexpr reports cs=0 (not -1) for an optional group that didn't
+    # participate in the match — so the only reliable signal is cs > 0.
+    has_default <- cs[2L] > 0L
+    default_val <- if (has_default) substr(s, cs[2L], cs[2L] + cl[2L] - 1L) else ""
+    val <- Sys.getenv(var_name, unset = NA_character_)
+    if (is.na(val) || !nzchar(val)) {
+      if (!has_default) missing_vars[[var_name]] <- TRUE
+      val <- default_val
+    }
+    result <- paste0(result, substr(s, 1L, full_start - 1L), val)
+    s <- substr(s, full_end + 1L, nchar(s))
+    m <- regexpr(pattern, s, perl = TRUE)
+  }
+  paste0(result, s)
+}
+
+#' @noRd
+.interpolate_env <- function(x, missing_vars) {
+  if (is.character(x)) {
+    vapply(x, .interpolate_string, character(1L),
+           missing_vars = missing_vars, USE.NAMES = FALSE)
+  } else if (is.list(x)) {
+    out <- lapply(x, function(v) .interpolate_env(v, missing_vars))
+    names(out) <- names(x)
+    out
+  } else {
+    x
+  }
+}
+
 # ── Spec loading ──────────────────────────────────────────────────────────────
 
 #' @noRd
@@ -39,6 +94,23 @@
          "Install it with: install.packages('yaml')")
 
   spec <- yaml::read_yaml(path)
+
+  # ${VAR} / ${VAR:-default} substitution from the environment. Done before
+  # validation so e.g. an empty CORE_API_KEY doesn't crash spec loading —
+  # users without the key can still load other collectors.
+  missing_vars <- new.env(parent = emptyenv())
+  spec <- .interpolate_env(spec, missing_vars)
+  miss <- ls(missing_vars)
+  if (length(miss)) {
+    warning(
+      "Collector '", spec$name %||% basename(path),
+      "': env var(s) referenced in YAML but not set in the environment: ",
+      paste(miss, collapse = ", "),
+      ". Affected fields resolved to empty strings; the collector may fail at runtime. ",
+      "Export the variable(s) before starting R (or before `docker compose up`).",
+      call. = FALSE
+    )
+  }
 
   missing_fields <- setdiff(c("name", "type"), names(spec))
   if (length(missing_fields))

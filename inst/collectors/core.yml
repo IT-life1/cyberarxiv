@@ -10,7 +10,11 @@ endpoint: "/search/works/"
 
 auth:
   type: bearer
-  token: "Yf9IRiK7dVrQvAWDJtoyHm1zl3Pu8cTN"
+  # Token is read from the CORE_API_KEY env var at spec-load time.
+  # Get one for free at https://core.ac.uk/services/api → "API key".
+  # Export it before launching R / `docker compose up`, e.g.:
+  #   export CORE_API_KEY=...
+  token: "${CORE_API_KEY}"
 
 pagination:
   type: offset
