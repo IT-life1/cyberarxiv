@@ -101,7 +101,7 @@ training_data/
 
 ### Environment variables
 
-Переменные окружения имеют приоритет над конфигом в UI:
+Переменные окружения имеют приоритет над конфигом в UI, **но только если непустые**. Пустая строка (`LLM_PROVIDER=""`) проваливается в UI-конфиг.
 
 | Variable | Описание | Пример |
 |---|---|---|
@@ -109,6 +109,21 @@ training_data/
 | `LLM_MODEL` | Имя модели | `gpt-4o-mini` |
 | `LLM_BASE_URL` | Base URL эндпоинта | `https://api.deepseek.com/v1` |
 | `LLM_PROVIDER` | Провайдер (для логирования) | `deepseek` |
+
+В `docker-compose.yml` эти переменные пробрасываются как `${LLM_*:-}` — без дефолтов. Если на хосте ничего не экспортировано, контейнер получает пустые значения, и побеждает выбор пользователя в UI. Чтобы headless-сценарии работали — экспортируйте нужные переменные на хосте до `docker compose up`:
+
+```bash
+LLM_PROVIDER=deepseek LLM_MODEL=deepseek-chat LLM_API_KEY=sk-... \
+  docker compose up -d cyberarxiv-ml
+```
+
+Источник каждого значения логируется при старте джоба лейблинга, например:
+
+```
+LLM: provider=deepseek (config) model=deepseek-chat (config) base_url=https://api.deepseek.com/v1 (config) api_key=(config) concurrency=4 rows=100
+```
+
+Если в контейнере есть env-override, сразу под этой строкой появится `Note: LLM_MODEL set in container env — these override the UI config...` — это спасает от ситуаций «выбрал DeepSeek в UI, а лейблер всё равно бьёт gpt-4o-mini».
 
 `_normalize_base_url()` обрезает случайно введённые суффиксы (`/chat/completions`, `/responses`, `/v1/responses`) — пользователь не должен думать об этом.
 

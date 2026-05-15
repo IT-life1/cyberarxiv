@@ -170,11 +170,25 @@ def label_dataframe(
         raise ValueError(f"DataFrame missing columns: {missing}")
 
     llm_cfg = cfg.get("llm", {})
-    # Environment variables take precedence over saved config
-    provider = os.environ.get("LLM_PROVIDER") or llm_cfg.get("provider", "openai")
-    model = os.environ.get("LLM_MODEL") or llm_cfg.get("model", "gpt-4o-mini")
-    api_key = os.environ.get("LLM_API_KEY") or llm_cfg.get("api_key", "") or ""
-    base_url = os.environ.get("LLM_BASE_URL") or llm_cfg.get("base_url", "") or ""
+
+    # Resolve each LLM field with explicit source tracking. Env vars are an
+    # opt-in override for headless runs; if the env value is empty (the
+    # default in docker-compose), fall through to the UI-saved config so
+    # the user's provider selection actually takes effect.
+    def _resolve(env_name: str, cfg_key: str, default):
+        env_val = os.environ.get(env_name)
+        if env_val:
+            return env_val, "env"
+        cfg_val = llm_cfg.get(cfg_key)
+        if cfg_val:
+            return cfg_val, "config"
+        return default, "default"
+
+    provider, provider_src = _resolve("LLM_PROVIDER", "provider", "openai")
+    model, model_src       = _resolve("LLM_MODEL", "model", "gpt-4o-mini")
+    api_key, api_key_src   = _resolve("LLM_API_KEY", "api_key", "")
+    base_url, base_url_src = _resolve("LLM_BASE_URL", "base_url", "")
+
     temperature = float(llm_cfg.get("temperature", 0.0) or 0.0)
     max_tokens = int(llm_cfg.get("max_tokens", 32) or 32)
     timeout = int(llm_cfg.get("request_timeout_secs", 60) or 60)
@@ -197,8 +211,25 @@ def label_dataframe(
     client = _build_client(provider, api_key, model, base_url, timeout)
 
     if log_cb:
-        log_cb(f"LLM: provider={provider} model={model} "
-               f"concurrency={concurrency} rows={len(df)}")
+        masked_base = base_url or "(SDK default)"
+        log_cb(
+            f"LLM: provider={provider} ({provider_src}) "
+            f"model={model} ({model_src}) "
+            f"base_url={masked_base} ({base_url_src}) "
+            f"api_key=({api_key_src}) "
+            f"concurrency={concurrency} rows={len(df)}"
+        )
+        env_overrides = [n for n, s in (
+            ("LLM_PROVIDER", provider_src), ("LLM_MODEL", model_src),
+            ("LLM_API_KEY", api_key_src), ("LLM_BASE_URL", base_url_src),
+        ) if s == "env"]
+        if env_overrides:
+            log_cb(
+                "Note: " + ", ".join(env_overrides) +
+                " set in container env — these override the UI config. "
+                "Unset them on the host (or remove from docker-compose.yml) "
+                "if you want the UI selection to take effect."
+            )
 
     rows: List[dict] = df[["id", "title", "abstract"]].astype(str).to_dict("records")
     results: Dict[int, dict] = {}
