@@ -4,7 +4,7 @@ R-пакет для автоматического сбора, классифи�
 
 Пакет реализует полный ETL-пайплайн: загрузка статей через arXiv API → хранение в DuckDB → keyword-классификация → ML-классификация (DistilBERT) → интерактивный дашборд или Shiny GUI.
 
-(запуск стенда через QUICK_START_QUIDE.md без git clone и setup_local.md для хардкора)
+(запуск стенда через QUICK_START_QUIDE.md без git clone и setup_local.md через git clone)
 ---
 
 ## Содержание
