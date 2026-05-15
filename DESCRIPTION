@@ -17,11 +17,11 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
-    httr2,
+    httr2 (>= 1.0.0),
     xml2,
-    duckdb,
+    duckdb (>= 0.9.0),
     DBI,
-    dplyr,
+    dplyr (>= 1.0.0),
     tidytext,
     stopwords,
     stringr,
@@ -36,7 +36,7 @@ Imports:
     httpuv,
     quarto,
     yaml,
-    jsonlite,
+    jsonlite (>= 1.7.0),
     digest
 Suggests:
     testthat (>= 3.0.0),
