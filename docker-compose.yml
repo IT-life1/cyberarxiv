@@ -14,6 +14,10 @@ services:
       - CYBERARXIV_DB_PATH=/srv/cyberarxiv/data/cyberarxiv.duckdb
       - ML_SERVICE_URL=http://cyberarxiv-ml:5001
       - MLFLOW_UI_URL=http://localhost:5000
+      # Secrets for collectors (inst/collectors/*.yml). Read via ${VAR}
+      # interpolation in collector_registry.R. Leave empty on the host if
+      # you don't use that source — the collector will warn and skip.
+      - CORE_API_KEY=${CORE_API_KEY:-}
     ports:
       - "8000:8000"
       - "3838:3838"
@@ -47,9 +51,12 @@ services:
       - MLFLOW_TRACKING_URI=http://cyberarxiv-mlflow:5000
       - TRAINING_DATA_DIR=/srv/cyberarxiv-ml/training_data
       - MODELS_DIR=/srv/cyberarxiv-ml/models
-      # LLM for training data labeling (env vars override UI config)
-      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
-      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      # LLM for training data labeling. Source of truth is the UI config
+      # (training_data/config.json). These env vars are an opt-in override
+      # for headless deployments — leave them unset on the host to let the
+      # UI selection win.
+      - LLM_PROVIDER=${LLM_PROVIDER:-}
+      - LLM_MODEL=${LLM_MODEL:-}
       - LLM_API_KEY=${LLM_API_KEY:-}
       - LLM_BASE_URL=${LLM_BASE_URL:-}
     ports:
@@ -78,13 +85,7 @@ services:
       - "5000:5000"
     volumes:
       - ./mlflow:/mlflow
-    command: >
-      bash -c "pip install --no-cache-dir mlflow &&
-               mlflow server
-               --backend-store-uri sqlite:///mlflow/mlflow.db
-               --default-artifact-root /mlflow/artifacts
-               --host 0.0.0.0
-               --port 5000"
+    command: bash -c "pip install --no-cache-dir mlflow && mlflow server --backend-store-uri sqlite:///mlflow/mlflow.db --default-artifact-root /mlflow/artifacts --host 0.0.0.0 --port 5000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
       interval: 30s
@@ -105,10 +106,14 @@ services:
       - CYBERARXIV_DB_PATH=/data/cyberarxiv.duckdb
       - ML_SERVICE_URL=http://cyberarxiv-ml:5001
       - ML_DEFAULT_MODEL=best_model
+      # streamable-http transport exposes the MCP endpoint at /mcp on MCP_PORT
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=5002
+    ports:
+      - "5002:5002"
     volumes:
       - ./data:/data
-    stdin_open: true
-    tty: true
     depends_on:
       cyberarxiv-ml:
         condition: service_healthy

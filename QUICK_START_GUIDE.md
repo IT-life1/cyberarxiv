@@ -41,6 +41,9 @@ services:
       - CYBERARXIV_DB_PATH=/srv/cyberarxiv/data/cyberarxiv.duckdb
       - ML_SERVICE_URL=http://cyberarxiv-ml:5001
       - MLFLOW_UI_URL=http://localhost:5000
+      # Опционально: ключ для коллектора CORE (https://core.ac.uk/services/api).
+      # Если оставить пустым — CORE-источник будет выдавать 401, остальные работают.
+      - CORE_API_KEY=${CORE_API_KEY:-}
     ports:
       - "8000:8000"
       - "3838:3838"
@@ -72,8 +75,12 @@ services:
       - MLFLOW_TRACKING_URI=http://cyberarxiv-mlflow:5000
       - TRAINING_DATA_DIR=/srv/cyberarxiv-ml/training_data
       - MODELS_DIR=/srv/cyberarxiv-ml/models
-      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
-      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      # LLM-настройки берутся из training_data/config.json (UI).
+      # Эти env-переменные оставлены пустыми, чтобы выбор провайдера в UI
+      # действительно применялся. Чтобы переопределить из хоста — экспортируйте
+      # LLM_PROVIDER / LLM_MODEL / LLM_API_KEY / LLM_BASE_URL перед `docker compose up`.
+      - LLM_PROVIDER=${LLM_PROVIDER:-}
+      - LLM_MODEL=${LLM_MODEL:-}
       - LLM_API_KEY=${LLM_API_KEY:-}
       - LLM_BASE_URL=${LLM_BASE_URL:-}
     ports:
@@ -127,16 +134,30 @@ services:
       - CYBERARXIV_DB_PATH=/data/cyberarxiv.duckdb
       - ML_SERVICE_URL=http://cyberarxiv-ml:5001
       - ML_DEFAULT_MODEL=best_model
+      # streamable-http транспорт: эндпоинт /mcp на MCP_PORT
+      - MCP_TRANSPORT=streamable-http
+      - MCP_HOST=0.0.0.0
+      - MCP_PORT=5002
+    ports:
+      - "5002:5002"
     volumes:
       - ./data:/data
-    stdin_open: true
-    tty: true
     depends_on:
       cyberarxiv-ml:
         condition: service_healthy
 ```
 
 ## 4. Запустите всё
+
+При необходимости экспортируйте секреты перед стартом (всё опционально):
+
+```bash
+export CORE_API_KEY=...          # ключ для коллектора CORE (core.ac.uk)
+export LLM_API_KEY=sk-...        # если хотите задать LLM-ключ через env, а не UI
+docker compose up -d
+```
+
+Или просто:
 
 ```bash
 docker compose up -d
@@ -155,6 +176,7 @@ docker compose logs -f cyberarxiv
 | Shiny-приложение | http://localhost:3838 |
 | ML API | http://localhost:5001 |
 | MLflow UI | http://localhost:5000 |
+| MCP-сервер (streamable-http) | http://localhost:5002/mcp |
 
 ## Проблемы
 Могут быть проблемы с поднятием mlflow через контейнеры. Разные версии mlflow биндятся к localhost, несмотря на --host 0.0.0.0. Для такого случая использовать старый добрый терминал:

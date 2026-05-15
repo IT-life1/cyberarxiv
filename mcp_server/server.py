@@ -16,7 +16,11 @@ from mcp.server.fastmcp import FastMCP
 import db
 import ml_client
 
-mcp = FastMCP("cyberarxiv")
+mcp = FastMCP(
+    "cyberarxiv",
+    host=os.environ.get("MCP_HOST", "127.0.0.1"),
+    port=int(os.environ.get("MCP_PORT", "8000")),
+)
 
 
 def _db() -> str:
@@ -146,4 +150,9 @@ def run_ml_batch(only_new: bool = True, limit: int = 100) -> str:
 
 
 if __name__ == "__main__":
-    mcp.run()
+    # MCP_TRANSPORT: stdio (default, Claude Desktop) | streamable-http | sse
+    transport = os.environ.get("MCP_TRANSPORT", "stdio")
+    if transport == "stdio":
+        mcp.run()
+    else:
+        mcp.run(transport=transport)

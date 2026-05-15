@@ -63,8 +63,19 @@ python -m pytest test_db.py test_ml_client.py test_server.py -v
 | `CYBERARXIV_DB_PATH` | `data/cyberarxiv.duckdb` | Путь к DuckDB |
 | `ML_SERVICE_URL` | `http://localhost:5001` | Адрес ML-сервиса |
 | `ML_DEFAULT_MODEL` | `best_model` | Модель по умолчанию |
+| `MCP_TRANSPORT` | `stdio` | Транспорт: `stdio` \| `streamable-http` \| `sse` |
+| `MCP_HOST` | `127.0.0.1` (локально) / `0.0.0.0` (Docker) | Bind-хост для сетевых транспортов |
+| `MCP_PORT` | `8000` (локально) / `5002` (Docker) | Порт для сетевых транспортов |
 
-## Подключение в Claude Desktop
+## Транспорты
+
+- **`stdio`** (по умолчанию) — клиент сам запускает процесс, общение через stdin/stdout. Используется Claude Desktop.
+- **`streamable-http`** — новый стандарт MCP (2025). Один HTTP-эндпоинт `/mcp` на `MCP_HOST:MCP_PORT`. Поддерживается Claude.ai (Custom integrations), Cursor, mcp-inspector.
+- **`sse`** — старый Server-Sent Events транспорт. Deprecated, но всё ещё работает в части клиентов.
+
+В `docker-compose.yml` по умолчанию выставлен `streamable-http` на `0.0.0.0:5002`, эндпоинт — `http://localhost:5002/mcp`.
+
+## Подключение в Claude Desktop (stdio)
 
 Добавить в `~/.config/Claude/claude_desktop_config.json`:
 
@@ -83,13 +94,26 @@ python -m pytest test_db.py test_ml_client.py test_server.py -v
 }
 ```
 
+## Подключение по HTTP (Claude.ai web, Cursor, mcp-inspector)
+
+После `docker compose up -d cyberarxiv-mcp` сервер слушает на `http://localhost:5002/mcp`. Проверить:
+
+```bash
+docker compose logs cyberarxiv-mcp   # должно быть «Uvicorn running on http://0.0.0.0:5002»
+npx @modelcontextprotocol/inspector  # затем ввести URL http://localhost:5002/mcp
+```
+
+В Claude.ai → Settings → Connectors → Add custom connector → указать URL `http://<host>:5002/mcp`.
+
+> **Безопасность.** В дефолтной конфигурации порт открыт на `0.0.0.0` без аутентификации. На публичных хостах закройте его firewall-ом, или прокиньте только на `127.0.0.1` (`ports: ["127.0.0.1:5002:5002"]`), или поставьте reverse-proxy с basic-auth / OAuth.
+
 ## Запуск через Docker
 
 ```bash
 docker compose up cyberarxiv-mcp
 ```
 
-Сервис автоматически ожидает готовности ML-сервиса (`depends_on: cyberarxiv-ml`).
+Сервис автоматически ожидает готовности ML-сервиса (`depends_on: cyberarxiv-ml`). Чтобы переключить транспорт обратно на stdio (например, для CLI-клиента, который сам spawn-ит процесс), задайте `MCP_TRANSPORT=stdio` и уберите `ports:` из `docker-compose.yml`.
 
 ## Поведение при ошибках
 
