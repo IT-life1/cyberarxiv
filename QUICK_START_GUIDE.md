@@ -103,7 +103,7 @@ services:
     volumes:
       - ./mlflow:/mlflow
     command: >
-      bash -c "pip install --no-cache-dir mlflow &&
+      bash -c "pip install --no-cache-dir 'mlflow<3.0' &&
                mlflow server
                --backend-store-uri sqlite:///mlflow/mlflow.db
                --default-artifact-root /mlflow/artifacts
@@ -153,6 +153,24 @@ docker compose logs -f cyberarxiv
 | Shiny-приложение | http://localhost:3838 |
 | ML API | http://localhost:5001 |
 | MLflow UI | http://localhost:5000 |
+
+## Проблемы
+Могут быть проблемы с поднятием mlflow через контейнеры. Разные версии mlflow биндятся к localhost, несмотря на --host 0.0.0.0. Для такого случая использовать старый добрый терминал:
+
+```cat > start-mlflow.sh <<'EOF'
+#!/bin/bash
+mkdir -p mlflow
+mlflow server \
+  --backend-store-uri sqlite:///mlflow/mlflow.db \
+  --default-artifact-root ./mlflow/artifacts \
+  --host 0.0.0.0 \
+  --port 5000
+EOF
+chmod +x start-mlflow.sh```
+
+В терминале запускаем:
+
+```nohup ./start-mlflow.sh > mlflow.log 2>&1 &```
 
 ## Остановка
 
