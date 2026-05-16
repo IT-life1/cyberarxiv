@@ -117,6 +117,7 @@ services:
       retries: 3
       start_period: 60s
 
+  # для нового mcp через http пока нету нового образа в github registry
   # ============================================================
   # MCP-сервер (интерфейс AI-ассистента)
   # ============================================================
@@ -152,6 +153,8 @@ docker compose up -d
 ```bash
 docker compose up -d
 ```
+
+Сервис cyberarxiv может запускаться ДО 5 минут
 
 ```bash
 docker compose logs -f cyberarxiv
