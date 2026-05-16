@@ -128,14 +128,10 @@ services:
       - CYBERARXIV_DB_PATH=/data/cyberarxiv.duckdb
       - ML_SERVICE_URL=http://cyberarxiv-ml:5001
       - ML_DEFAULT_MODEL=best_model
-      # streamable-http транспорт: эндпоинт /mcp на MCP_PORT
-      - MCP_TRANSPORT=streamable-http
-      - MCP_HOST=0.0.0.0
-      - MCP_PORT=5002
-    ports:
-      - "5002:5002"
     volumes:
       - ./data:/data
+    stdin_open: true
+    tty: true
     depends_on:
       cyberarxiv-ml:
         condition: service_healthy
