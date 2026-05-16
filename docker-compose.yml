@@ -26,6 +26,16 @@ services:
       - ./raw-data:/srv/cyberarxiv/raw-data
       - ./site:/var/www/html
       - ./training_data:/srv/cyberarxiv/training_data
+    # Hotfix without rebuild: preload DuckDB `json` extension into the
+    # container's extension cache so update_ml_tags() / get_ml_task_ids()
+    # can use json_merge_patch / json_keys without autoload failing.
+    entrypoint:
+      - bash
+      - -c
+      - |
+        R -e 'con <- DBI::dbConnect(duckdb::duckdb(), ":memory:"); DBI::dbExecute(con, "INSTALL json;"); DBI::dbExecute(con, "LOAD json;"); cat("duckdb json extension ready\n")' \
+          || echo "WARN: duckdb json install failed, continuing"
+        exec /srv/cyberarxiv/docker/start.sh
     depends_on:
       cyberarxiv-ml:
         condition: service_healthy
@@ -114,6 +124,14 @@ services:
       - "5002:5002"
     volumes:
       - ./data:/data
+    # Same hotfix for the Python duckdb client used by the MCP server.
+    entrypoint:
+      - bash
+      - -c
+      - |
+        python -c "import duckdb; c=duckdb.connect(); c.execute('INSTALL json'); c.execute('LOAD json'); print('duckdb json extension ready')" \
+          || echo "WARN: duckdb json install failed, continuing"
+        exec python server.py
     depends_on:
       cyberarxiv-ml:
         condition: service_healthy
