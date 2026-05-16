@@ -155,6 +155,7 @@ docker compose up -d
 ```
 
 Сервис cyberarxiv может запускаться ДО 5 минут
+Доступные модели для работы нужно установить из папки models/ данного репозитория и положить локально в свою папку models/
 
 ```bash
 docker compose logs -f cyberarxiv
