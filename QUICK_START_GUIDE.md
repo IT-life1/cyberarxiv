@@ -52,6 +52,13 @@ services:
       - ./raw-data:/srv/cyberarxiv/raw-data
       - ./site:/var/www/html
       - ./training_data:/srv/cyberarxiv/training_data
+    entrypoint:
+      - bash
+      - -c
+      - |
+        R -e 'con <- DBI::dbConnect(duckdb::duckdb(), ":memory:"); DBI::dbExecute(con, "INSTALL json;"); DBI::dbExecute(con, "LOAD json;"); cat("duckdb json extension ready\n")' \
+          || echo "WARN: duckdb json install failed, continuing"
+        exec /srv/cyberarxiv/docker/start.sh
     depends_on:
       cyberarxiv-ml:
         condition: service_healthy
@@ -131,6 +138,13 @@ services:
       - ML_DEFAULT_MODEL=best_model
     volumes:
       - ./data:/data
+    entrypoint:
+      - bash
+      - -c
+      - |
+        python -c "import duckdb; c=duckdb.connect(); c.execute('INSTALL json'); c.execute('LOAD json'); print('duckdb json extension ready')" \
+          || echo "WARN: duckdb json install failed, continuing"
+        exec python server.py
     stdin_open: true
     tty: true
     depends_on:
