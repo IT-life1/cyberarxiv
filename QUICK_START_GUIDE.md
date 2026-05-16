@@ -170,7 +170,28 @@ docker compose logs -f cyberarxiv
 | Shiny-приложение | http://localhost:3838 |
 | ML API | http://localhost:5001 |
 | MLflow UI | http://localhost:5000 |
-| MCP-сервер (streamable-http) | http://localhost:5002/mcp |
+| MCP-сервер (stdio) |
+
+
+## Настройка mcp-server
+
+Подключение в Claude Desktop (stdio)
+Добавить в ~/.config/Claude/claude_desktop_config.json:
+
+{
+  "mcpServers": {
+    "cyberarxiv": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "cyberarxiv-mcp",
+        "python",
+        "server.py"
+      ]
+    }
+  }
+}
 
 ## Обновление до последних образов
 
