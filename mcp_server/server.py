@@ -14,6 +14,7 @@ from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 import db
+import fetchers
 import ml_client
 
 mcp = FastMCP(
@@ -147,6 +148,90 @@ def run_ml_batch(only_new: bool = True, limit: int = 100) -> str:
     limit: максимальное количество статей (default 100).
     Результаты сохраняются в DuckDB."""
     return tool_run_ml_batch(only_new=only_new, limit=limit)
+
+
+# ─── Инструменты загрузки извне ────────────────────────────────────────────
+
+def _fetch_and_store(rows: list[dict], source: str) -> dict:
+    if not rows:
+        return {"status": "ok", "source": source, "fetched": 0, "inserted": 0, "updated": 0,
+                "message": "Внешний источник не вернул результатов"}
+    res = db.upsert_papers(db_path=_db(), rows=rows)
+    return {
+        "status": "ok",
+        "source": source,
+        "fetched": len(rows),
+        "inserted": res["inserted"],
+        "updated": res["updated"],
+        "message": f"{source}: получено {len(rows)}, добавлено {res['inserted']}, обновлено {res['updated']}",
+    }
+
+
+@mcp.tool()
+def fetch_arxiv(query: str = "", max_results: int = 50) -> str:
+    """Скачать статьи с arXiv (Atom API) и сохранить в БД.
+
+    query: search_query в формате arXiv (например, 'cat:cs.CR AND all:malware').
+           Пусто → дефолтный фильтр по кибербезопасности (cs.CR/cs.NI/cs.LG).
+    max_results: сколько максимум статей загрузить (default 50, hard cap arXiv = 30000).
+    """
+    try:
+        rows = fetchers.fetch_arxiv(query=query, max_results=int(max_results))
+    except Exception as exc:
+        return json.dumps({"status": "error", "source": "arxiv", "message": str(exc)},
+                          ensure_ascii=False)
+    return json.dumps(_fetch_and_store(rows, "arxiv"), ensure_ascii=False)
+
+
+@mcp.tool()
+def fetch_cyberleninka(set_spec: str = "journal_32131", max_results: int = 50) -> str:
+    """Скачать статьи с КиберЛенинки (OAI-PMH) и сохранить в БД.
+
+    set_spec: OAI set (default 'journal_32131' — «Вопросы кибербезопасности»).
+    max_results: сколько максимум статей загрузить (default 50).
+    """
+    try:
+        rows = fetchers.fetch_cyberleninka(set_spec=set_spec, max_results=int(max_results))
+    except Exception as exc:
+        return json.dumps({"status": "error", "source": "cyberleninka", "message": str(exc)},
+                          ensure_ascii=False)
+    return json.dumps(_fetch_and_store(rows, "cyberleninka"), ensure_ascii=False)
+
+
+@mcp.tool()
+def fetch_core(query: str = "", max_results: int = 50) -> str:
+    """Скачать статьи с CORE API v3 и сохранить в БД.
+
+    Требуется env CORE_API_KEY (бесплатно: https://core.ac.uk/services/api).
+    query: текстовый запрос (default — кибербезопасность).
+    max_results: сколько максимум статей загрузить (default 50).
+    """
+    try:
+        rows = fetchers.fetch_core(query=query, max_results=int(max_results))
+    except Exception as exc:
+        return json.dumps({"status": "error", "source": "core", "message": str(exc)},
+                          ensure_ascii=False)
+    return json.dumps(_fetch_and_store(rows, "core"), ensure_ascii=False)
+
+
+@mcp.tool()
+def fetch_by_url(url: str) -> str:
+    """Скачать одну статью по URL или DOI и сохранить в БД.
+
+    Поддерживается:
+      * https://arxiv.org/abs/<id>  или  arxiv.org/pdf/<id>
+      * https://doi.org/<doi>  /  doi:<doi>  /  голый DOI '10.x/y'
+    """
+    try:
+        row = fetchers.fetch_by_url(url)
+    except Exception as exc:
+        return json.dumps({"status": "error", "source": "url", "message": str(exc)},
+                          ensure_ascii=False)
+    if not row:
+        return json.dumps({"status": "ok", "source": "url", "fetched": 0, "inserted": 0,
+                           "updated": 0, "message": "Не удалось получить метаданные"},
+                          ensure_ascii=False)
+    return json.dumps(_fetch_and_store([row], row.get("source", "url")), ensure_ascii=False)
 
 
 if __name__ == "__main__":
