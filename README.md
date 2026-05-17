@@ -409,6 +409,7 @@ search_papers(df, query = "ransomware", year = 2024)
 
 | Тема | Где |
 |---|---|
+| Полная архитектура, ETL, ML/training, схема, справочник функций | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | Подключение MCP, список инструментов | [mcp_server/README.md](mcp_server/README.md) |
 | YAML-коллекторы, env-секреты, troubleshooting | [inst/collectors/README.md](inst/collectors/README.md) |
 | Схема DuckDB, upsert-логика, миграции | [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) |
