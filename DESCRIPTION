@@ -15,24 +15,20 @@ Description: Collects arXiv papers related to cybersecurity, stores them locally
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 Imports:
+    httr (>= 1.4.0),
     httr2 (>= 1.0.0),
     xml2,
     duckdb (>= 0.9.0),
     DBI,
     dplyr (>= 1.0.0),
     tidytext,
-    stopwords,
     stringr,
     magrittr,
     tibble,
     plotly,
     lubridate,
-    igraph,
     tidyr,
-    ggplot2,
-    RColorBrewer,
     yaml,
     jsonlite (>= 1.7.0),
     digest
@@ -46,3 +42,4 @@ Config/testthat/edition: 3
 Depends:
     R (>= 4.3)
 LazyData: true
+Config/roxygen2/version: 8.0.0

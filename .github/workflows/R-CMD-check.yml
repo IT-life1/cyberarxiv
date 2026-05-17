@@ -66,6 +66,9 @@ jobs:
       - name: Run R CMD check (also runs testthat)
         uses: r-lib/actions/check-r-package@v2
         with:
-          args: 'c("--no-manual", "--as-cran")'
+          # --as-cran is intentionally NOT used: with Encoding: UTF-8 in
+          # DESCRIPTION we rely on non-ASCII strings in messages and
+          # Shiny UI labels. Reinstate when prepping for a CRAN submission.
+          args: 'c("--no-manual")'
           error-on: '"error"'
           upload-snapshots: true

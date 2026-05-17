@@ -1,6 +1,5 @@
 ^LICENSE\.md$
 ^README\.md$
-^QUICK_START_GUIDE\.md$
 ^DATABASE_SCHEMA\.md$
 ^setup_local\.md$
 ^docker$
@@ -23,3 +22,5 @@
 ^\.github$
 ^\.Rproj\.user$
 ^.*\.Rproj$
+^\.dockerignore$
+^\.claude$
