@@ -407,6 +407,36 @@ training_get_config()                            # см. сохранённые 
 
 ---
 
+### 🧠 Классификация
+
+| Подход | Точка вызова | Сохраняется в |
+|---|---|---|
+| Keyword (`inst/keywords*.yml`) | `classify_data(df)` | `papers.tag` |
+| ML (DistilBERT, per-language) | `classify_with_ml(df)` → `update_ml_tags(res, task_id="default")` | `papers.ml_results.<task>` |
+
+Языковое разделение автоматическое: статьи делятся по колонке `language` и отправляются в модель, заданную в [`inst/ml_tasks.yml`](inst/ml_tasks.yml) для конкретной пары *task × язык*. Если модели для языка нет — статьи пропускаются, в Shiny над кнопкой батч-классификации появляется warning-баннер.
+
+### 🎓 Обучение моделей (Shiny GUI)
+
+Вкладка **Обучение модели** в Shiny GUI ведёт через 4 шага без R/Python-кода:
+
+1. **Сбор данных** — выбираете задачу arXiv, тащите N тысяч статей в `training_data/raw/*.parquet`.
+2. **LLM-разметка** — статьи прогоняются через OpenAI / Anthropic / xAI (ключ и промпт в Конфигурации) → `training_data/labeled/*.parquet`.
+3. **Excel-экспорт** — labeled.parquet → `.xlsx` для ручной правки.
+4. **Train** — fine-tune DistilBERT поверх размеченных данных, MLflow трекает run, готовый `.pt` падает в `./models/`. После — `register_ml_task()` подключает её как новую ML-task.
+
+Архитектура training pipeline и подробности конфигурации — в [`ml_service/training_pipeline/`](ml_service/training_pipeline/) и [setup_local.md](setup_local.md).
+
+### 🤖 ML API
+
+REST-эндпоинты сервиса `cyberarxiv-ml` (порт 5001): `GET /health`, `GET /models`, `POST /classify`, `POST /classify_single`, `POST /reload_models`, плюс `/training/*` для GUI-pipeline. Полная спецификация — в [`ml_service/app.py`](ml_service/app.py); пример запроса:
+
+```bash
+curl -s -X POST http://localhost:5001/classify_single \
+  -H 'Content-Type: application/json' \
+  -d '{"id":"demo","abstract":"We detect ransomware..."}'
+```
+
 ### 🏗 Полный ETL
 
 `etl()` объединяет fetch → DuckDB upsert → keyword-классификация; `etl_with_ml()` добавляет ML-шаг.
