@@ -2079,6 +2079,7 @@ launch_app <- function(host = "0.0.0.0",
         dir.create(dirname(db_path), showWarnings = FALSE, recursive = TRUE)
         con <- DBI::dbConnect(duckdb::duckdb(), dbdir = db_path)
         on.exit(DBI::dbDisconnect(con, shutdown = TRUE))
+        .cyberarxiv_ensure_duckdb_extensions(con)
         .cyberarxiv_init_schema(con)
         "Схема инициализирована."
       }, error = function(e) paste("ERROR:", conditionMessage(e)))
