@@ -832,8 +832,10 @@ launch_app <- function(host = "0.0.0.0",
         append_log(paste0("max_results=", n_req, ", only_new=", only_new))
         shiny::incProgress(0.1)
 
-        # Захватываем message() из etl()
-        msgs <- character(0)
+        # Surface message() and warning() emitted by etl()/collectors into the
+        # visible ETL log. Without the warning handler, things like
+        # "Atom fetch failed: HTTP 429 Too Many Requests" silently ended up on
+        # stderr and the user only saw "0 records fetched" with no hint why.
         withCallingHandlers(
           tryCatch(
             etl(max_results = n_req, only_new = only_new, sources = sources,
@@ -843,6 +845,10 @@ launch_app <- function(host = "0.0.0.0",
           message = function(m) {
             append_log(trimws(conditionMessage(m)))
             invokeRestart("muffleMessage")
+          },
+          warning = function(w) {
+            append_log(paste("WARNING:", trimws(conditionMessage(w))))
+            invokeRestart("muffleWarning")
           }
         )
         shiny::incProgress(0.6)
