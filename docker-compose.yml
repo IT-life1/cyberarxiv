@@ -10,7 +10,12 @@ services:
     container_name: cyberarxiv
     restart: unless-stopped
     environment:
-      - MAX_RESULTS=1000
+      # First-boot ETL: lightweight — only arXiv, 50 papers — so the user
+      # gets to a working Shiny GUI in <2 minutes instead of waiting on a
+      # full multi-source pull. Override via env to scale up:
+      #   MAX_RESULTS=1000 CYBERARXIV_SOURCES=arxiv,core,cyberleninka docker compose up
+      - MAX_RESULTS=${MAX_RESULTS:-50}
+      - CYBERARXIV_SOURCES=${CYBERARXIV_SOURCES:-arxiv}
       - QUERY=
       - CYBERARXIV_DB_PATH=/srv/cyberarxiv/data/cyberarxiv.duckdb
       - ML_SERVICE_URL=http://cyberarxiv-ml:5001

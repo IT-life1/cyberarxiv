@@ -331,7 +331,8 @@ search_papers(df, query = "ransomware", year = 2024)
 | `ML_DEFAULT_MODEL` | `best_model` | Модель по умолчанию для MCP |
 | `TRAINING_DATA_DIR` | каскадный fallback | База для training-pipeline артефактов |
 | `MLFLOW_TRACKING_URI` | `http://localhost:5000` | MLflow tracking |
-| `MAX_RESULTS` | `1000` | Кол-во статей при ETL из Docker |
+| `MAX_RESULTS` | `50` | Кол-во статей при ETL из Docker (первый запуск держим маленьким; повышайте для регулярных pull'ов) |
+| `CYBERARXIV_SOURCES` | `arxiv` | Список источников через запятую (`arxiv`, `core`, `cyberleninka`). Пусто = все enabled |
 | `QUERY` | *(default cybersecurity)* | arXiv-запрос при ETL из Docker |
 | `CORE_API_KEY` | — | Ключ [CORE API](https://core.ac.uk/services/api) |
 | `LLM_PROVIDER` / `LLM_API_KEY` / `LLM_MODEL` / `LLM_BASE_URL` | — | Override LLM-настроек UI (см. setup_local.md) |
