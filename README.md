@@ -19,7 +19,6 @@ R-пакет для автоматического сбора, классифи�
 - [ML-сервис](#ml-сервис)
 - [Training Pipeline (GUI)](#training-pipeline-gui) ★ новое
 - [Обучение модели (CLI)](#обучение-модели-cli)
-- [Дашборд (Quarto)](#дашборд-quarto)
 - [Shiny GUI](#shiny-gui)
 - [Схема базы данных](#схема-базы-данных)
 - [Переменные окружения](#переменные-окружения)
@@ -40,9 +39,9 @@ R-пакет для автоматического сбора, классифи�
                │ HTTP                         │ HTTPS
                ▼                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                  cyberarxiv  (порты 8000, 3838)                 │
+│                  cyberarxiv  (порт 3838)                        │
 │                                                                 │
-│  R-пакет + Quarto Dashboard + Shiny GUI (7 вкладок)             │
+│  R-пакет + Shiny GUI (7 вкладок)                                │
 │  ─────────────────────────────────────────────────────────────  │
 │  collect_all()       →  RDS (raw-data/) → DuckDB                │
 │  classify_data()     →  keyword-теги                            │
@@ -51,7 +50,7 @@ R-пакет для автоматического сбора, классифи�
 │  training_*  ───────→  HTTP → cyberarxiv-ml /training/*         │
 │    (collect / label / export_excel / train / jobs / files)      │
 │                                                                 │
-│  render_dashboard() / launch_app()                              │
+│  launch_app()                                                   │
 └─────────────────────────┬───────────────────────────────────────┘
                           │ HTTP (порт 5001)
                           ▼
@@ -110,8 +109,6 @@ cyberarxiv/
 │   ├── db.R                    # Подключение к DuckDB + инициализация схемы
 │   ├── mlflow_client.R         # Клиент инференса + update_ml_tags()
 │   ├── training_client.R       # Клиент training-pipeline (config/collect/label/train)
-│   ├── dashboard.R             # Рендер Quarto дашборда
-│   ├── serve_dashboard.R       # HTTP-сервер для дашборда
 │   ├── shiny_app.R             # Shiny GUI (7 вкладок, включая Обучение)
 │   ├── text_utils.R            # Топ-слова по аннотациям
 │   ├── cyberarxiv_data.R       # Документация встроенного датасета
@@ -136,8 +133,7 @@ cyberarxiv/
 │   ├── collectors/             # YAML-спеки коллекторов (см. inst/collectors/README.md)
 │   ├── keywords.yml            # English keyword-таксономия
 │   ├── keywords_ru.yml         # Russian keyword-таксономия
-│   ├── ml_tasks.yml            # Маппинг task → {lang: model_name}
-│   └── quarto/dashboard.qmd
+│   └── ml_tasks.yml            # Маппинг task → {lang: model_name}
 │
 ├── training_data/              # Артефакты GUI-пайплайна (маунт в оба контейнера)
 │   ├── raw/                    # arxiv_*.parquet (сырые)
@@ -186,7 +182,6 @@ docker compose up -d
 | Сервис | URL | Описание |
 |---|---|---|
 | Shiny GUI | http://localhost:3838 | Интерактивный дашборд (7 вкладок) |
-| Quarto дашборд | http://localhost:8000/dashboard.html | Статические графики |
 | ML API | http://localhost:5001 | REST API классификатора |
 | MLflow UI | http://localhost:5000 | Трекинг экспериментов |
 | MCP-сервер | http://localhost:5002/mcp | Для Claude.ai / Cursor (streamable-http) |
@@ -217,14 +212,11 @@ docker compose pull
 docker compose up -d
 ```
 
-### Параметры ETL и UI
+### Параметры ETL
 
 ```bash
 # Скачать 500 статей с кастомным запросом
 MAX_RESULTS=500 QUERY="cat:cs.CR AND all:ransomware" docker compose up
-
-# По умолчанию запускается Quarto дашборд; для Shiny:
-UI_MODE=shiny docker compose up
 ```
 
 ### Локальная сборка (для разработки)
@@ -244,7 +236,6 @@ docker compose up --build
 ### Требования
 
 - R ≥ 4.3
-- Quarto ≥ 1.5 (для рендера дашборда)
 - Python ≥ 3.10 (для ML-сервиса и training-pipeline)
 - ~3 GB свободного места (PyTorch + transformers + DistilBERT)
 
@@ -779,43 +770,9 @@ curl -X POST http://localhost:5001/reload_model
 
 ---
 
-## Дашборд (Quarto)
-
-Дашборд рендерится в статический HTML и раздаётся на порту 8000.
-
-### Запуск вручную
-
-```r
-library(cyberarxiv)
-
-# Рендер в директорию _site (по умолчанию)
-render_dashboard()
-
-# Рендер в кастомную директорию
-render_dashboard(output_dir = "/var/www/html")
-
-# Использовать свой .qmd шаблон
-render_dashboard(source = "my_dashboard.qmd", output_dir = "_site")
-
-# Запустить HTTP-сервер для раздачи
-serve_dashboard(dir = "_site", port = 8000)
-```
-
-### Содержание дашборда
-
-- **Количество публикаций по месяцам** — линейный график (Plotly)
-- **Авторы с наибольшим кол-вом публикаций** — топ-10, bar chart
-- **Распределение по тематическим меткам** — pie chart, динамическая палитра
-- **Публикации по дням недели** — bar chart (Пн–Вс, на русском)
-- **Самые частые слова в аннотациях** — топ-30 после фильтрации стоп-слов
-- **Распределение числа авторов** — гистограмма
-- **Топ-5 ключевых слов по темам** — faceted bar chart (ggplot2 + plotly)
-
----
-
 ## Shiny GUI
 
-Интерактивное веб-приложение как альтернатива дашборду. Запускается на порту 3838.
+Основной UI проекта — интерактивное веб-приложение на порту 3838.
 
 ```r
 library(cyberarxiv)
@@ -900,7 +857,6 @@ launch_app(ml_service_url = "http://ml-host:5001")
 | `MLFLOW_UI_URL` | `http://localhost:5000` | URL для ссылки в Shiny GUI |
 | `MAX_RESULTS` | `1000` | Кол-во статей при ETL из Docker |
 | `QUERY` | *(cybersecurity default)* | arXiv-запрос при ETL из Docker |
-| `UI_MODE` | `dashboard` | Режим UI: `dashboard` или `shiny` |
 | `CYBERARXIV_COLLECTORS_DIR` | — | Доп. директория для YAML-коллекторов |
 
 ### TRAINING_DATA_DIR — каскадный fallback
@@ -979,12 +935,6 @@ get_top_words_by_tag(data, n = 5)
 ### UI
 
 ```r
-# Рендер Quarto дашборда
-render_dashboard(source = NULL, output_dir = "_site", quiet = TRUE)
-
-# HTTP-сервер для дашборда
-serve_dashboard(dir = "_site", port = 8000)
-
 # Shiny GUI (7 вкладок, включая Обучение модели)
 launch_app(host = "0.0.0.0", port = 3838, ml_service_url = NULL, launch_browser = interactive())
 ```

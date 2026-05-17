@@ -147,14 +147,6 @@ launch_app(host = "127.0.0.1", port = 3838, launch_browser = FALSE)
 
 Открыть: http://localhost:3838 → вкладка **🎓 Обучение модели**.
 
-### 3.4 Quarto-дашборд
-
-```r
-library(cyberarxiv)
-render_dashboard()
-serve_dashboard()  # http://localhost:8000
-```
-
 ---
 
 ## Порядок запуска

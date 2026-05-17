@@ -40,12 +40,5 @@ else
   log "ML classification step skipped or failed (non-fatal)"
 fi
 
-# UI_MODE can be "dashboard" (Quarto, default) or "shiny" (interactive GUI)
-UI_MODE="${UI_MODE:-shiny}"
-if [ "$UI_MODE" = "shiny" ]; then
-  log "Starting Shiny GUI (UI_MODE=shiny) on port 3838"
-  exec Rscript /srv/cyberarxiv/docker/run_shiny.R 2>&1
-else
-  log "Starting Quarto dashboard server (UI_MODE=dashboard) on port 8000"
-  exec Rscript /srv/cyberarxiv/docker/run_dashboard.R 2>&1
-fi
+log "Starting Shiny GUI on port 3838"
+exec Rscript /srv/cyberarxiv/docker/run_shiny.R 2>&1

@@ -20,18 +20,16 @@ services:
       # you don't use that source — the collector will warn and skip.
       - CORE_API_KEY=${CORE_API_KEY:-}
     ports:
-      - "8000:8000"
       - "3838:3838"
     volumes:
       - ./data:/srv/cyberarxiv/data
       - ./raw-data:/srv/cyberarxiv/raw-data
-      - ./site:/var/www/html
       - ./training_data:/srv/cyberarxiv/training_data
     depends_on:
       cyberarxiv-ml:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/dashboard.html"]
+      test: ["CMD", "curl", "-f", "http://localhost:3838/"]
       interval: 30s
       timeout: 10s
       retries: 3

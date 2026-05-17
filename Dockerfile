@@ -31,13 +31,6 @@ ENV MAKEFLAGS="-j2"
 
 RUN R -e 'install.packages("pak")'
 
-# Install Quarto - pin a specific version for reproducibility
-ARG QUARTO_VERSION=1.5.57
-RUN wget -q -O /tmp/quarto.deb "https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}/quarto-${QUARTO_VERSION}-linux-amd64.deb" \
- && apt-get update \
- && apt-get install -y --no-install-recommends /tmp/quarto.deb \
- && rm -rf /var/lib/apt/lists/* /tmp/quarto.deb
-
 COPY DESCRIPTION NAMESPACE /srv/cyberarxiv/
 COPY R/ /srv/cyberarxiv/R/
 COPY man/ /srv/cyberarxiv/man/
@@ -52,16 +45,14 @@ RUN R -e 'install.packages(c("shiny", "DT", "rhandsontable"))'
 
 COPY docker/ /srv/cyberarxiv/docker/
 RUN chmod +x /srv/cyberarxiv/docker/run_etl.R \
-    /srv/cyberarxiv/docker/run_dashboard.R \
     /srv/cyberarxiv/docker/run_shiny.R \
-    /srv/cyberarxiv/docker/serve_dashboard.sh \
     /srv/cyberarxiv/docker/start.sh
 
-RUN mkdir -p /srv/cyberarxiv/data /srv/cyberarxiv/raw-data /var/www/html
+RUN mkdir -p /srv/cyberarxiv/data /srv/cyberarxiv/raw-data
 
 ENV CYBERARXIV_DB_PATH=/srv/cyberarxiv/data/cyberarxiv.duckdb
 ENV ML_SERVICE_URL=http://cyberarxiv-ml:5001
 
-EXPOSE 8000 3838
+EXPOSE 3838
 
 CMD ["/srv/cyberarxiv/docker/start.sh"]
