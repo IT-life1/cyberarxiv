@@ -407,6 +407,16 @@ training_get_config()                            # см. сохранённые 
 
 ---
 
+### 🛰 Сбор статей
+Коллекторы описываются YAML-файлами в [`inst/collectors/`](inst/collectors/), без R-кода. Поддерживаются типы `atom`, `rss`, `oai_pmh`, `json_api`, `r_script`. Из коробки идут [arXiv](inst/collectors/arxiv.yml), [CORE](inst/collectors/core.yml), [КиберЛенинка (OAI-PMH)](inst/collectors/cyberleninka.yml). Подробности и шаблон нового коллектора — в [inst/collectors/README.md](inst/collectors/README.md).
+
+```r
+collect_all(max_results = 500)               # все включённые источники
+collect_all(sources = c("arxiv"),            # только arxiv
+            max_results = 100)
+list_collectors()                            # что доступно
+```
+
 ### 🧠 Классификация
 
 | Подход | Точка вызова | Сохраняется в |
