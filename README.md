@@ -427,43 +427,14 @@ search_papers(df, query = "ransomware", year = 2024)
 ```
 
 
-## Shiny GUI
+### 📺 Shiny GUI
 
-Основной UI проекта — интерактивное веб-приложение на порту 3838.
+7 вкладок: 🎯 ETL · 🔍 Поиск · 📊 Таблица · 🤖 ML Classifier · 📈 Analytics · 🎓 Обучение модели · ⚙️ Настройки. Запуск из R:
 
 ```r
-library(cyberarxiv)
-
-# Запуск локально (откроет браузер)
-launch_app()
-
-# На другом порту
-launch_app(port = 8080)
-
-# Для Docker / сервера (без браузера)
-launch_app(launch_browser = FALSE)
-
-# С явным URL ML-сервиса
-launch_app(ml_service_url = "http://ml-host:5001")
+launch_app(host = "127.0.0.1", port = 3838)
 ```
 
-### Вкладки приложения
-
-**📊 Обзор** — сводные метрики (всего статей, с ML-меткой, источников, статус ML-сервиса) + три графика (источники, теги, публикации по месяцам). Статус ML-сервиса автоматически перепроверяется каждые 30 секунд.
-
-**📥 Загрузка (ETL)** — форма запуска ETL: галочки коллекторов (arXiv / CORE / КиберЛенинка / любые свои YAML-спеки), per-collector query overrides, выбор ML-task для пост-классификации. Показывает лог в реальном времени и таблицу последних загруженных.
-
-**📚 Таблица статей** — полная таблица из БД с фильтрами по тексту, году, источнику, языку, keyword-тегу. Экспорт в CSV.
-
-**🤖 ML-классификатор** — статус инференс-сервиса, список загруженных моделей, пакетная классификация (только новых / перезаписать все), ad-hoc классификация с выбором языка и задачи.
-
-**📈 Аналитика** — топ-15 авторов, топ-25 слов, кросс-таблица keyword-тег × ML-тег.
-
-**🎓 Обучение модели** ★ новое — 6 подвкладок: Конфигурация (классы + промпты + LLM creds через rhandsontable), Сбор данных, Разметка LLM, Excel, Обучение (с настраиваемым MLflow URI), Джобы (всё с auto-refresh).
-
-**⚙ Настройки** — текущие пути и URL, кнопка переинициализации схемы БД.
-
----
 
 ## Переменные окружения
 
@@ -496,106 +467,6 @@ launch_app(ml_service_url = "http://ml-host:5001")
 
 ```r
 options(cyberarxiv.db_path = "/path/to/cyberarxiv.duckdb")
-```
-
----
-
-## Справочник функций
-
-### ETL и загрузка данных
-
-```r
-# Основной пайплайн (fetch → RDS → DB → classify → update tags)
-etl(max_results = 100, only_new = FALSE, db_path = NULL)
-
-# То же + ML-классификация
-etl_with_ml(max_results = 100, ml_service_url = NULL)
-
-# Загрузить статьи с arXiv (без сохранения)
-get_arxiv_papers(query = NULL, max_results = 100)
-
-# Сохранить/загрузить сырые данные (RDS)
-save_raw_data(data, filename = "arxiv_papers.rds", dir = "raw-data")
-load_raw_data(filename = "arxiv_papers.rds", dir = "raw-data")
-
-# Upsert в DuckDB
-save_publications(data, db_path = NULL)
-
-# Чтение из DuckDB с фильтрами
-load_publications(db_path = NULL, year = NULL, category = NULL, text = NULL, limit = NULL)
-```
-
-### Классификация
-
-```r
-# Keyword-классификация (добавляет колонку tag)
-classify_data(data)
-
-# ML-классификация через HTTP
-classify_with_ml(data, ml_service_url = NULL, batch_size = 50)
-
-# Записать ML-теги в БД
-update_ml_tags(ml_results, db_path = NULL)
-
-# Проверить доступность ML-сервиса
-ml_service_is_healthy(ml_service_url = NULL)
-```
-
-### Поиск и анализ текста
-
-```r
-# Поиск в загруженных данных
-search_papers(data, query = NULL, year = NULL)
-
-# Топ-N слов из аннотаций
-get_top_words(data, n = 30)
-
-# Топ-N слов по каждой теме
-get_top_words_by_tag(data, n = 5)
-```
-
-### UI
-
-```r
-# Shiny GUI (7 вкладок, включая Обучение модели)
-launch_app(host = "0.0.0.0", port = 3838, ml_service_url = NULL, launch_browser = interactive())
-```
-
-### Training pipeline
-
-```r
-# Конфигурация
-training_get_config()
-training_set_config(classes = NULL, system_prompt = NULL,
-                    user_prompt_template = NULL, llm = NULL)
-
-# Async-jobs (возвращают job_id)
-training_start_collect(target, query = NULL, page_size = 200L)
-training_start_label(raw_path, max_rows = 0L)
-training_start_export_excel(labeled_path, max_rows = 0L)
-training_start_train(excel_path, model_name_out = "custom_model",
-                     base_model = "distilbert-base-uncased",
-                     epochs = 8L, batch_size = 16L, lr = 2e-5,
-                     max_length = 256L, test_size = 0.1, val_size = 0.1,
-                     mlflow_tracking_uri = NULL)
-
-# Управление job-ами
-training_get_job(job_id)
-training_list_jobs(type = NULL, limit = 50L)
-training_cancel_job(job_id)
-
-# Артефакты
-training_list_files(category = c("raw","labeled","excel"))
-training_download_file(category, filename, dest_path)
-
-# Hot-reload новых моделей в инференс-сервис
-training_reload_models()
-
-# Зарегистрировать обученную модель как новую ML-task
-register_ml_task(task_name = "my_grok_task",
-                 label = "Моя модель (Grok)",
-                 model_name = "my_grok_model",  # имя .pt без расширения
-                 language = "en")
 ```
 
 ---
