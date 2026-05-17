@@ -13,7 +13,8 @@ get_arxiv_papers(query = NULL, max_results = 100)
 }
 \value{
 data.frame with columns:
-id, link, title, authors, abstract, categories, published_date, updated_date.
+id, source, language, link, title, authors, abstract, categories,
+published_date, updated_date, tag.
 }
 \description{
 Fetches papers from arXiv API (Atom) and returns a data.frame.
