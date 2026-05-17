@@ -2,12 +2,14 @@
 % Please edit documentation in R/save_publications.R
 \name{save_publications}
 \alias{save_publications}
-\title{Save arXiv publications to DuckDB (single table)}
+\title{Save publications to DuckDB (single table)}
 \usage{
 save_publications(data, db_path = NULL)
 }
 \arguments{
-\item{data}{data.frame as returned by \code{get_arxiv_papers()} or processed data}
+\item{data}{data.frame as returned by \code{collect_all()} or processed data.
+Required columns: id, link, title, authors, abstract, categories,
+published_date, updated_date, tag, source, language.}
 
 \item{db_path}{optional path to duckdb file (default: package db path)}
 }
@@ -15,5 +17,6 @@ save_publications(data, db_path = NULL)
 invisible list with \code{inserted}, \code{updated}, and \code{skipped} counts
 }
 \description{
-Write a data.frame of arXiv papers into the package DuckDB database.
+Write a data.frame of papers into the package DuckDB database.
+Uses an upsert pattern: UPDATE existing records, INSERT new ones.
 }

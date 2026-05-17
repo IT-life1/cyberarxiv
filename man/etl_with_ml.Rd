@@ -4,14 +4,34 @@
 \alias{etl_with_ml}
 \title{Full ETL pipeline with ML classification}
 \usage{
-etl_with_ml(max_results = 100, ml_service_url = NULL)
+etl_with_ml(
+  max_results = 100,
+  ml_service_url = NULL,
+  task = "default",
+  sources = NULL,
+  collectors_dir = NULL,
+  db_path = NULL
+)
 }
 \arguments{
-\item{max_results}{How many papers to load}
+\item{max_results}{How many papers to load.}
 
-\item{ml_service_url}{URL of the ML service (default from env var ML_SERVICE_URL)}
+\item{ml_service_url}{URL of the ML service (default from env var ML_SERVICE_URL).}
+
+\item{task}{Task name from \code{inst/ml_tasks.yml} (default: \code{"default"}).
+Use \code{list_ml_tasks()} to see available tasks and their loaded models.}
+
+\item{sources}{Character vector of collector names to run.}
+
+\item{collectors_dir}{Additional directory to scan for collector YAML files.}
+
+\item{db_path}{Path to DuckDB file. If NULL, uses the package default.}
 }
 \description{
 Extended ETL pipeline that also runs ML classification on fetched papers
-and updates the database with ML-predicted tags.
+and updates the database with ML-predicted tags. Language routing is
+automatic: papers are split by the \code{language} column and sent to
+the model defined for that language in the chosen task. If a model for
+a particular language is not loaded in the service, those papers are
+skipped and their \code{ml_tag} stays empty.
 }

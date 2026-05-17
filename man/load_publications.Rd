@@ -9,7 +9,9 @@ load_publications(
   year = NULL,
   category = NULL,
   text = NULL,
-  limit = NULL
+  limit = NULL,
+  source = NULL,
+  language = NULL
 )
 }
 \arguments{
@@ -24,20 +26,17 @@ env \code{CYBERARXIV_DB_PATH} -> option \code{cyberarxiv.db_path} -> \code{data/
 \item{text}{Optional string. Case-insensitive search in \code{title} OR \code{abstract}.}
 
 \item{limit}{Optional integer to limit number of rows returned (applied after filtering).}
+
+\item{source}{Optional string. Keeps rows where \code{source} matches exactly
+(e.g. \code{"arxiv"}, \code{"habr"}). NULL returns all sources.}
+
+\item{language}{Optional string. Keeps rows where \code{language} matches exactly
+(e.g. \code{"en"}, \code{"ru"}). NULL returns all languages.}
 }
 \value{
 A data.frame (or tibble if \code{tibble} installed) with columns:
-\describe{
-\item{paper_id}{arXiv identifier (e.g. "2512.13613")}
-\item{link}{arXiv URL}
-\item{title}{Title}
-\item{authors}{Authors as a comma-separated string}
-\item{abstract}{Abstract/summary}
-\item{categories}{Human-readable categories as a comma-separated string}
-\item{published_date}{POSIXct timestamp (UTC) when first published}
-\item{updated_date}{POSIXct timestamp (UTC) when last updated on arXiv}
-\item{ingested_at}{Timestamp when record was inserted/updated in local DB}
-}
+paper_id, link, title, authors, abstract, categories,
+published_date, updated_date, ingested_at, tag, ml_results, source, language
 }
 \description{
 Reads publications previously saved into the local DuckDB database (table \code{papers}).
