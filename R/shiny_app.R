@@ -859,6 +859,12 @@ launch_app <- function(host = "0.0.0.0",
             append_log(paste0("ML-классификация [задача: ", task_label, "]..."))
             raw <- tryCatch(load_publications(), error = function(e) NULL)
             if (!is.null(raw) && nrow(raw) > 0) {
+              # classify_with_ml() expects an `id` column; load_publications()
+              # returns `paper_id`. Without this alias the call inside
+              # .classify_by_language() failed with "Data must contain 'id'"
+              # and the user saw "ML ERROR" in the log but no batch ran.
+              if (!"id" %in% names(raw) && "paper_id" %in% names(raw))
+                raw$id <- raw$paper_id
               available <- tryCatch(
                 names(list_ml_models(ml_service_url)$models),
                 error = function(e) character(0)

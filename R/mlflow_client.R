@@ -57,8 +57,16 @@ classify_with_ml <- function(data, model = NULL, ml_service_url = NULL, batch_si
     return(data.frame(id = character(0), ml_tag = character(0), ml_confidence = numeric(0)))
   }
 
+  # load_publications() returns a `paper_id` column; older code paths used
+  # `id`. Accept either to avoid silent "Data must contain 'id'" failures
+  # when a caller wires the DB result straight into classify_with_ml.
+  if (!"id" %in% names(data) && "paper_id" %in% names(data)) {
+    data$id <- data$paper_id
+  }
+
   if (!"abstract" %in% names(data) || !"id" %in% names(data)) {
-    stop("Data must contain 'id' and 'abstract' columns")
+    stop("Data must contain 'id' (or 'paper_id') and 'abstract' columns; ",
+         "got columns: ", paste(names(data), collapse = ", "))
   }
 
   # Check if ML service is available
