@@ -27,6 +27,82 @@ docker compose up -d
 
 ---
 
+## 🔌 Подключение MCP
+
+`cyberarxiv-mcp` поднимается на `http://localhost:5002/mcp` (streamable-http) и даёт AI-ассистенту 10 инструментов: `search_papers`, `get_paper`, `get_stats`, `get_categories`, `classify_paper`, `run_ml_batch`, `fetch_arxiv`, `fetch_cyberleninka`, `fetch_core`, `fetch_by_url`.
+
+<details>
+<summary><b>Claude.ai (web)</b> — Custom integration</summary>
+
+Settings → Connectors → *Add custom connector* → URL `http://<host>:5002/mcp`. Если хост публичный — закройте порт firewall'ом или поднимите reverse-proxy с auth (по умолчанию MCP открыт без авторизации).
+
+</details>
+
+<details>
+<summary><b>Cursor</b></summary>
+
+`.cursor/mcp.json` в корне проекта:
+
+```json
+{
+  "mcpServers": {
+    "cyberarxiv": {
+      "url": "http://localhost:5002/mcp"
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><b>Claude Desktop</b> — stdio (без Docker-инстанса MCP)</summary>
+
+`~/.config/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "cyberarxiv": {
+      "command": "docker",
+      "args": ["exec", "-i", "cyberarxiv-mcp", "python", "server.py"],
+      "env": {"MCP_TRANSPORT": "stdio"}
+    }
+  }
+}
+```
+
+Альтернативно — поднять stdio локально без Docker: см. [mcp_server/README.md](mcp_server/README.md).
+
+</details>
+
+<details>
+<summary><b>mcp-inspector</b> — для отладки</summary>
+
+```bash
+npx @modelcontextprotocol/inspector
+# в UI указать URL: http://localhost:5002/mcp
+```
+
+</details>
+
+Примеры диалога:
+
+```
+"Найди статьи про ransomware за 2024 год"
+   → search_papers(query="ransomware", year=2024)
+
+"Скачай 20 свежих публикаций с arxiv про supply-chain attacks"
+   → fetch_arxiv(query="cat:cs.CR AND all:supply chain", max_results=20)
+
+"Добавь https://arxiv.org/abs/2401.12345 в базу"
+   → fetch_by_url(url="https://arxiv.org/abs/2401.12345")
+```
+
+Подробности и полный список параметров инструментов: [mcp_server/README.md](mcp_server/README.md).
+
+---
+
 ## Содержание
 
 - [Архитектура](#архитектура)
