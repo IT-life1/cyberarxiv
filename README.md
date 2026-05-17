@@ -1,10 +1,29 @@
 # cyberarxiv
 
-R-пакет для автоматического сбора, классификации и визуализации научных статей по кибербезопасности с [arXiv](https://arxiv.org).
+R-пакет для автоматического сбора, классификации и визуализации научных статей по кибербезопасности с [arXiv](https://arxiv.org), [CORE](https://core.ac.uk) и [КиберЛенинки](https://cyberleninka.ru). ETL → DuckDB → keyword-классификация → ML (DistilBERT) → Shiny GUI.
 
-Пакет реализует полный ETL-пайплайн: загрузка статей через arXiv API → хранение в DuckDB → keyword-классификация → ML-классификация (DistilBERT) → интерактивный дашборд или Shiny GUI.
+## ⚡ Быстрый старт
 
-См. [Быстрый старт (Docker)](#быстрый-старт-docker) для запуска через `git clone && docker compose up` или [Локальная установка](#локальная-установка) для разработки.
+```bash
+git clone https://github.com/IT-life1/cyberarxiv.git
+cd cyberarxiv
+docker compose up -d
+```
+
+Откройте **http://localhost:3838** — Shiny GUI с поиском, аналитикой, ML-классификатором и обучением моделей.
+
+| Сервис | URL |
+|---|---|
+| 📊 Shiny GUI | http://localhost:3838 |
+| 🤖 ML API | http://localhost:5001 |
+| 📈 MLflow | http://localhost:5000 |
+| 🔌 MCP (для Claude.ai / Cursor) | http://localhost:5002/mcp |
+
+**Опционально**, чтобы заработала ML-классификация: скачайте [готовые веса](https://disk.yandex.ru/d/Vr8vB1gI23XflA) (~1.6 ГБ), положите оба файла в `./models/` и сделайте `curl -X POST http://localhost:5001/reload_models`.
+
+Образы поставляются готовыми из [GitHub Container Registry](https://github.com/IT-life1/cyberarxiv/pkgs/container/cyberarxiv) — `docker compose` тянет их сам, локально собирать ничего не нужно.
+
+➡️ [Подробности и опции](#быстрый-старт-docker) · [Локальная установка](#локальная-установка) · [Архитектура](#архитектура)
 
 ---
 
