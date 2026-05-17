@@ -407,120 +407,23 @@ training_get_config()                            # см. сохранённые 
 
 ---
 
-## ETL-пайплайн
+### 🏗 Полный ETL
 
-### Основная функция `etl()`
-
-Пайплайн следует паттерну **fetch → RDS → DB → classify → update tags**:
-
-```
-arXiv API
-    ↓ get_arxiv_papers()
-RDS (raw-data/arxiv_papers.rds)
-    ↓ save_publications() с пустыми тегами
-DuckDB (papers table)
-    ↓ classify_data()
-classify_data() — классификация в памяти
-    ↓ .update_tags()
-DuckDB — UPDATE tag WHERE paper_id IN (...)
-```
-
-Этот порядок гарантирует, что **данные не теряются при сбое классификатора**: статьи оседают в БД с пустым тегом до начала классификации. Перезапустить классификацию можно без повторного обращения к arXiv.
-
-### Стандартный ETL
+`etl()` объединяет fetch → DuckDB upsert → keyword-классификация; `etl_with_ml()` добавляет ML-шаг.
 
 ```r
-library(cyberarxiv)
-
-# Скачать 100 статей (по умолчанию)
-etl()
-
-# Скачать 500 статей
-etl(max_results = 500)
-
-# Указать путь к БД явно
-etl(max_results = 200, db_path = "/data/my.duckdb")
+etl(max_results = 500, sources = c("arxiv", "core"))
+etl_with_ml(max_results = 500, task = "default")
 ```
 
-### ETL только новых статей
 
-Режим `only_new = TRUE` перед загрузкой читает все `paper_id` из БД и фильтрует уже известные статьи на лету, страница за страницей. Останавливается как только накоплено `max_results` новых.
+### 🗄 База данных
+
+Одна таблица `papers` в DuckDB. Полная схема, индексы, upsert-логика и каскадный fallback для пути БД — в отдельном файле [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md).
 
 ```r
-# Скачать ровно 10 статей, которых нет в БД
-etl(max_results = 10, only_new = TRUE)
-
-# Скачать 50 новых (проверит не более 50*10 = 500 с arXiv)
-etl(max_results = 50, only_new = TRUE)
-```
-
-Защита от зависания: потолок запросов к arXiv — `max_results * 10` (минимум 100). Если новых не хватает — функция завершается с сообщением.
-
-### ETL с ML-классификацией
-
-```r
-# Стандартный ETL + автоматическая ML-классификация (если сервис доступен)
-etl_with_ml(max_results = 100)
-
-# Явно указать URL ML-сервиса
-etl_with_ml(max_results = 100, ml_service_url = "http://localhost:5001")
-```
-
-### Ручное управление шагами
-
-```r
-# Шаг 1: загрузить сырые данные
-papers <- get_arxiv_papers(max_results = 200)
-
-# Шаг 2: сохранить в RDS
-save_raw_data(papers)
-
-# Шаг 3: загрузить из RDS
-raw <- load_raw_data()
-
-# Шаг 4: классифицировать
-classified <- classify_data(raw)
-
-# Шаг 5: сохранить в БД
-result <- save_publications(classified)
-cat("Добавлено:", result$inserted, "Обновлено:", result$updated)
-
-# Шаг 6: прочитать из БД
-pubs <- load_publications()
-```
-
----
-
-### 🧠 Классификация
-
-| Подход | Точка вызова | Сохраняется в |
-|---|---|---|
-| Keyword (`inst/keywords*.yml`) | `classify_data(df)` | `papers.tag` |
-| ML (DistilBERT, per-language) | `classify_with_ml(df)` → `update_ml_tags(res, task_id="default")` | `papers.ml_results.<task>` |
-
-Языковое разделение автоматическое: статьи делятся по колонке `language` и отправляются в модель, заданную в [`inst/ml_tasks.yml`](inst/ml_tasks.yml) для конкретной пары *task × язык*. Если модели для языка нет — статьи пропускаются, в Shiny над кнопкой батч-классификации появляется warning-баннер.
-
-
-### 🎓 Обучение моделей (Shiny GUI)
-
-Вкладка **Обучение модели** в Shiny GUI ведёт через 4 шага без R/Python-кода:
-
-1. **Сбор данных** — выбираете задачу arXiv, тащите N тысяч статей в `training_data/raw/*.parquet`.
-2. **LLM-разметка** — статьи прогоняются через OpenAI / Anthropic / xAI (ключ и промпт в Конфигурации) → `training_data/labeled/*.parquet`.
-3. **Excel-экспорт** — labeled.parquet → `.xlsx` для ручной правки.
-4. **Train** — fine-tune DistilBERT поверх размеченных данных, MLflow трекает run, готовый `.pt` падает в `./models/`. После — `register_ml_task()` подключает её как новую ML-task.
-
-Архитектура training pipeline и подробности конфигурации — в [`ml_service/training_pipeline/`](ml_service/training_pipeline/) и [setup_local.md](setup_local.md).
-
-
-### 🤖 ML API
-
-REST-эндпоинты сервиса `cyberarxiv-ml` (порт 5001): `GET /health`, `GET /models`, `POST /classify`, `POST /classify_single`, `POST /reload_models`, плюс `/training/*` для GUI-pipeline. Полная спецификация — в [`ml_service/app.py`](ml_service/app.py); пример запроса:
-
-```bash
-curl -s -X POST http://localhost:5001/classify_single \
-  -H 'Content-Type: application/json' \
-  -d '{"id":"demo","abstract":"We detect ransomware..."}'
+load_publications(language = "ru", category = "Malware", limit = 50)
+search_papers(df, query = "ransomware", year = 2024)
 ```
 
 
@@ -559,41 +462,6 @@ launch_app(ml_service_url = "http://ml-host:5001")
 **🎓 Обучение модели** ★ новое — 6 подвкладок: Конфигурация (классы + промпты + LLM creds через rhandsontable), Сбор данных, Разметка LLM, Excel, Обучение (с настраиваемым MLflow URI), Джобы (всё с auto-refresh).
 
 **⚙ Настройки** — текущие пути и URL, кнопка переинициализации схемы БД.
-
----
-
-## Схема базы данных
-
-Используется DuckDB (встроенная колоночная БД, файл `cyberarxiv.duckdb`).
-
-### Таблица `papers`
-
-| Колонка | Тип | Описание |
-|---|---|---|
-| `paper_id` | VARCHAR | ID статьи на arXiv (без версии, напр. `2401.12345`) |
-| `link` | VARCHAR | Полная ссылка на abs-страницу |
-| `title` | VARCHAR | Заголовок статьи |
-| `authors` | VARCHAR | Авторы через `, ` |
-| `abstract` | VARCHAR | Аннотация |
-| `categories` | VARCHAR | Категории arXiv, развёрнутые в полные названия через `, ` |
-| `published_date` | TIMESTAMP | Дата первой публикации (UTC) |
-| `updated_date` | TIMESTAMP | Дата последнего обновления (UTC) |
-| `ingested_at` | TIMESTAMP | Время записи в БД (DEFAULT now()) |
-| `tag` | VARCHAR | Keyword-тег (из `classify_data()`) |
-| `ml_tag` | VARCHAR | ML-тег (из `classify_with_ml()`) |
-| `ml_confidence` | DOUBLE | Уверенность ML-классификатора (0–1) |
-
-Индексы: `paper_id`, `published_date`, `updated_date`, `tag`, `ml_tag`.
-
-### Upsert-логика
-
-При каждом вызове `save_publications()` выполняется транзакция:
-
-1. Данные пишутся во временную таблицу `stg_papers`
-2. `UPDATE papers SET ... FROM stg_papers WHERE paper_id = ... AND updated_date > p.updated_date` — обновляет существующие записи только если пришла более новая версия статьи
-3. При UPDATE тег сохраняется: `COALESCE(NULLIF(trim(s.tag), ''), p.tag)` — пустой тег не затирает существующий
-4. `INSERT INTO papers ... WHERE NOT EXISTS (SELECT 1 FROM papers WHERE paper_id = s.paper_id)` — добавляет только новые
-5. `stg_papers` удаляется, транзакция коммитится (или откатывается при ошибке)
 
 ---
 
