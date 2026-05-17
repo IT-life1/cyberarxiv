@@ -107,148 +107,57 @@ npx @modelcontextprotocol/inspector
 
 - [Архитектура](#архитектура)
 - [Структура проекта](#структура-проекта)
-- [Быстрый старт (Docker)](#быстрый-старт-docker)
+- [Быстрый старт (Docker) — детально](#быстрый-старт-docker)
 - [Локальная установка](#локальная-установка)
-- [ETL-пайплайн](#etl-пайплайн)
-- [Классификация статей](#классификация-статей)
-- [ML-сервис](#ml-сервис)
-- [Training Pipeline (GUI)](#training-pipeline-gui) ★ новое
-- [Обучение модели (CLI)](#обучение-модели-cli)
-- [Shiny GUI](#shiny-gui)
-- [Схема базы данных](#схема-базы-данных)
-- [Переменные окружения](#переменные-окружения)
-- [Справочник функций](#справочник-функций)
+- [Что внутри](#что-внутри) — сбор, классификация, ETL, GUI, обучение
+- [Конфигурация (env vars)](#-конфигурация)
+- [Документация](#-документация)
 - [Troubleshooting](#troubleshooting)
 
 ---
 
 ## Архитектура
 
-Система состоит из трёх Docker-сервисов, которые взаимодействуют друг с другом:
+Четыре Docker-сервиса:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│           arXiv · CORE · КиберЛенинка · LLM (OpenAI/             │
-│                  Anthropic/xAI) — внешние API                   │
-└──────────────┬──────────────────────────────┬───────────────────┘
-               │ HTTP                         │ HTTPS
-               ▼                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                  cyberarxiv  (порт 3838)                        │
-│                                                                 │
-│  R-пакет + Shiny GUI (7 вкладок)                                │
-│  ─────────────────────────────────────────────────────────────  │
-│  collect_all()       →  RDS (raw-data/) → DuckDB                │
-│  classify_data()     →  keyword-теги                            │
-│  classify_with_ml()  →  HTTP → cyberarxiv-ml /classify          │
-│                                                                 │
-│  training_*  ───────→  HTTP → cyberarxiv-ml /training/*         │
-│    (collect / label / export_excel / train / jobs / files)      │
-│                                                                 │
-│  launch_app()                                                   │
-└─────────────────────────┬───────────────────────────────────────┘
-                          │ HTTP (порт 5001)
-                          ▼
-┌─────────────────────────────────────────────────────────────────┐
-│               cyberarxiv-ml  (порт 5001)                        │
-│                                                                 │
-│  Python 3.11 · FastAPI · PyTorch · DistilBERT-base-uncased      │
-│  ─────────────────────────────────────────────────────────────  │
-│  Inference:                                                     │
-│   POST /classify        — пакетная классификация                │
-│   POST /classify_single — одна аннотация                        │
-│   GET  /health  /models /model_info                             │
-│   POST /reload_models   — горячая перезагрузка .pt              │
-│                                                                 │
-│  Training pipeline (training_pipeline/*):                       │
-│   GET/POST /training/config         — таксономия + промпты + LLM│
-│   POST     /training/collect        — сбор arXiv (job)          │
-│   POST     /training/label          — LLM-разметка (job)        │
-│   POST     /training/export_excel   — labeled.parquet → .xlsx   │
-│   POST     /training/train          → subprocess train_model.py │
-│   GET      /training/jobs[/{id}]    — статус и лог job-ов       │
-│   GET      /training/files/{cat}    — артефакты в training_data/│
-│   GET      /training/health         — диагностика пайплайна     │
-└─────────────────────────┬───────────────────────────────────────┘
-                          │ HTTP (порт 5000)
-                          ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              cyberarxiv-mlflow  (порт 5000)                     │
-│                                                                 │
-│  MLflow Tracking Server · SQLite backend                        │
-│  Хранит параметры, метрики и .pt-артефакты каждого run          │
-└─────────────────────────────────────────────────────────────────┘
+                   arXiv · CORE · КиберЛенинка · LLM API
+                                    │
+              ┌─────────────────────┼─────────────────────┐
+              ▼                     ▼                     ▼
+       ┌─────────────┐      ┌───────────────┐      ┌──────────────┐
+       │ cyberarxiv  │ ───▶ │ cyberarxiv-ml │ ───▶ │  cyberarxiv- │
+       │   :3838     │ HTTP │     :5001     │ HTTP │  mlflow:5000 │
+       │ R + Shiny   │      │ FastAPI       │      │ MLflow       │
+       └─────────────┘      │ PyTorch       │      │ Tracking     │
+              ▲             │ DistilBERT    │      └──────────────┘
+              │ DuckDB      └───────────────┘
+              ▼                     ▲
+       ┌─────────────┐               │
+       │ cyberarxiv- │ ──────────────┘
+       │   mcp:5002  │   AI-ассистенты (Claude.ai, Cursor, …)
+       │ MCP server  │
+       └─────────────┘
 ```
 
-### Порядок запуска (docker-compose)
+- **cyberarxiv** — собирает статьи (`collect_all`), keyword-классифицирует (`classify_data`), пишет в DuckDB; Shiny GUI на :3838.
+- **cyberarxiv-ml** — DistilBERT-инференс (`/classify`, `/classify_single`) + GUI-training pipeline (`/training/*`).
+- **cyberarxiv-mlflow** — MLflow Tracking server для метрик и `.pt`-артефактов.
+- **cyberarxiv-mcp** — MCP-сервер, открывает поиск и fetch'еры внешним AI-клиентам.
 
-Docker Compose поднимает сервисы в правильном порядке:
-1. `cyberarxiv-mlflow` — стартует первым (MLflow не обязателен, но запускается раньше)
-2. `cyberarxiv-ml` — ждёт healthy-check перед стартом основного сервиса
-3. `cyberarxiv` — стартует только после того, как ML-сервис здоров; запускает ETL и поднимает UI
+Docker Compose поднимает их в порядке: `cyberarxiv-mlflow` → `cyberarxiv-ml` (ждёт healthy) → `cyberarxiv` + `cyberarxiv-mcp` параллельно.
 
 ---
 
 ## Структура проекта
 
 ```
-cyberarxiv/
-├── R/                          # Исходный код R-пакета
-│   ├── collector_registry.R    # Реестр коллекторов (YAML-driven)
-│   ├── fetch_feed.R            # atom/rss/oai_pmh/core_api/r_script
-│   ├── get_arxiv_papers.R      # Backwards-compat wrapper
-│   ├── raw_data.R              # Сохранение/загрузка RDS (raw-слой)
-│   ├── classify_data.R         # Keyword-классификатор + ETL-пайплайн
-│   ├── save_publications.R     # Upsert в DuckDB + маппинг категорий
-│   ├── load_publications.R     # Чтение из DuckDB с фильтрами
-│   ├── db.R                    # Подключение к DuckDB + инициализация схемы
-│   ├── mlflow_client.R         # Клиент инференса + update_ml_tags()
-│   ├── training_client.R       # Клиент training-pipeline (config/collect/label/train)
-│   ├── shiny_app.R             # Shiny GUI (7 вкладок, включая Обучение)
-│   ├── text_utils.R            # Топ-слова по аннотациям
-│   ├── cyberarxiv_data.R       # Документация встроенного датасета
-│   └── zzz.R                   # .onLoad / .onAttach хуки
-│
-├── ml_service/                 # Python ML-сервис
-│   ├── app.py                  # FastAPI-приложение + BertClassifier
-│   ├── arxiv_classifier.py     # Датасет, DataLoader, архитектура модели
-│   ├── train_model.py          # Скрипт обучения (CLI; запускается как subprocess)
-│   ├── training_pipeline/      # Python-пакет: GUI-driven training pipeline
-│   │   ├── paths.py            # Каскадный резолвер base-директории
-│   │   ├── config_store.py     # Persistent config: classes/prompts/LLM keys
-│   │   ├── job_store.py        # File-backed job tracker (выживает рестарт)
-│   │   ├── data_collector.py   # arXiv Atom → parquet
-│   │   ├── llm_labeler.py      # OpenAI/Anthropic/xAI Grok → labels
-│   │   ├── excel_export.py     # parquet ↔ xlsx ↔ training CSV
-│   │   ├── train_runner.py     # Subprocess wrapper для train_model.py
-│   │   └── pipeline.py         # Оркестратор для FastAPI BackgroundTasks
-│   └── requirements.txt        # fastapi, torch, openai, anthropic, openpyxl, …
-│
-├── inst/                       # Установленные ресурсы пакета
-│   ├── collectors/             # YAML-спеки коллекторов (см. inst/collectors/README.md)
-│   ├── keywords.yml            # English keyword-таксономия
-│   ├── keywords_ru.yml         # Russian keyword-таксономия
-│   └── ml_tasks.yml            # Маппинг task → {lang: model_name}
-│
-├── training_data/              # Артефакты GUI-пайплайна (маунт в оба контейнера)
-│   ├── raw/                    # arxiv_*.parquet (сырые)
-│   ├── labeled/                # labeled_*.parquet (после LLM)
-│   ├── excel/                  # *.xlsx (для ручной правки)
-│   ├── training_csv/           # CSV для train_model.py
-│   ├── jobs/                   # JSON со статусом каждого job
-│   └── config/training_config.json  # Классы, промпты, LLM creds
-│
-├── models/                     # *.pt чекпойнты (читает инференс-сервис)
-├── mlflow/                     # SQLite-БД MLflow + artifacts
-├── docker/                     # Скрипты запуска R-контейнера
-├── data/                       # DuckDB БД, raw RDS, встроенный датасет
-├── man/                        # Документация (roxygen2 .Rd)
-├── Dockerfile                  # R-сервис (rocker/r-ver:4.3.2)
-├── Dockerfile.ml               # ML-сервис (python:3.11-slim)
-├── docker-compose.yml          # Оркестрация трёх сервисов
-├── DESCRIPTION                 # Метаданные R-пакета
-├── NAMESPACE                   # Экспорты (генерируется roxygen2)
-└── renv.lock                   # Зафиксированные версии R-пакетов
+R/              # R-пакет: коллекторы, ETL, классификация, Shiny GUI
+ml_service/     # Python: FastAPI + PyTorch (инференс + training pipeline)
+mcp_server/     # Python: MCP-сервер для AI-ассистентов
+inst/           # YAML-спеки коллекторов, keyword-таксономии, ml_tasks.yml
+docker/         # start.sh, run_etl.R, run_shiny.R
+data/  raw-data/  models/  mlflow/  training_data/   # bind-mount данные (gitignored)
 ```
 
 ---
@@ -407,6 +316,8 @@ training_get_config()                            # см. сохранённые 
 
 ---
 
+## Что внутри
+
 ### 🛰 Сбор статей
 Коллекторы описываются YAML-файлами в [`inst/collectors/`](inst/collectors/), без R-кода. Поддерживаются типы `atom`, `rss`, `oai_pmh`, `json_api`, `r_script`. Из коробки идут [arXiv](inst/collectors/arxiv.yml), [CORE](inst/collectors/core.yml), [КиберЛенинка (OAI-PMH)](inst/collectors/cyberleninka.yml). Подробности и шаблон нового коллектора — в [inst/collectors/README.md](inst/collectors/README.md).
 
@@ -426,6 +337,15 @@ list_collectors()                            # что доступно
 
 Языковое разделение автоматическое: статьи делятся по колонке `language` и отправляются в модель, заданную в [`inst/ml_tasks.yml`](inst/ml_tasks.yml) для конкретной пары *task × язык*. Если модели для языка нет — статьи пропускаются, в Shiny над кнопкой батч-классификации появляется warning-баннер.
 
+### 🏗 Полный ETL
+
+`etl()` объединяет fetch → DuckDB upsert → keyword-классификация; `etl_with_ml()` добавляет ML-шаг.
+
+```r
+etl(max_results = 500, sources = c("arxiv", "core"))
+etl_with_ml(max_results = 500, task = "default")
+```
+
 ### 🎓 Обучение моделей (Shiny GUI)
 
 Вкладка **Обучение модели** в Shiny GUI ведёт через 4 шага без R/Python-кода:
@@ -437,6 +357,14 @@ list_collectors()                            # что доступно
 
 Архитектура training pipeline и подробности конфигурации — в [`ml_service/training_pipeline/`](ml_service/training_pipeline/) и [setup_local.md](setup_local.md).
 
+### 📺 Shiny GUI
+
+7 вкладок: 🎯 ETL · 🔍 Поиск · 📊 Таблица · 🤖 ML Classifier · 📈 Analytics · 🎓 Обучение модели · ⚙️ Настройки. Запуск из R:
+
+```r
+launch_app(host = "127.0.0.1", port = 3838)
+```
+
 ### 🤖 ML API
 
 REST-эндпоинты сервиса `cyberarxiv-ml` (порт 5001): `GET /health`, `GET /models`, `POST /classify`, `POST /classify_single`, `POST /reload_models`, плюс `/training/*` для GUI-pipeline. Полная спецификация — в [`ml_service/app.py`](ml_service/app.py); пример запроса:
@@ -447,16 +375,6 @@ curl -s -X POST http://localhost:5001/classify_single \
   -d '{"id":"demo","abstract":"We detect ransomware..."}'
 ```
 
-### 🏗 Полный ETL
-
-`etl()` объединяет fetch → DuckDB upsert → keyword-классификация; `etl_with_ml()` добавляет ML-шаг.
-
-```r
-etl(max_results = 500, sources = c("arxiv", "core"))
-etl_with_ml(max_results = 500, task = "default")
-```
-
-
 ### 🗄 База данных
 
 Одна таблица `papers` в DuckDB. Полная схема, индексы, upsert-логика и каскадный fallback для пути БД — в отдельном файле [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md).
@@ -466,49 +384,37 @@ load_publications(language = "ru", category = "Malware", limit = 50)
 search_papers(df, query = "ransomware", year = 2024)
 ```
 
+---
 
-### 📺 Shiny GUI
+## ⚙️ Конфигурация
 
-7 вкладок: 🎯 ETL · 🔍 Поиск · 📊 Таблица · 🤖 ML Classifier · 📈 Analytics · 🎓 Обучение модели · ⚙️ Настройки. Запуск из R:
-
-```r
-launch_app(host = "127.0.0.1", port = 3838)
-```
-
-
-## Переменные окружения
-
-| Переменная | По умолчанию | Описание |
+| Переменная | Дефолт | Описание |
 |---|---|---|
-| `CYBERARXIV_DB_PATH` | `data/cyberarxiv.duckdb` | Путь к файлу DuckDB |
-| `ML_SERVICE_URL` | `http://localhost:5001` | URL ML-классификатора (для R-сервиса) |
-| `ML_SERVICE_PORT` | `5001` | Порт ML-сервиса (для контейнера) |
-| `MODEL_PATH` | `/srv/cyberarxiv-ml/models/model.pt` | Устаревший single-model путь |
-| `MODELS_DIR` | `/srv/cyberarxiv-ml/models` | Директория со всеми `.pt`-моделями |
-| `TRAINING_DATA_DIR` | каскадный fallback | База для training-pipeline артефактов (см. ниже) |
-| `MLFLOW_TRACKING_URI` | `http://localhost:5000` | URL MLflow (читает train_model.py) |
-| `MLFLOW_UI_URL` | `http://localhost:5000` | URL для ссылки в Shiny GUI |
+| `CYBERARXIV_DB_PATH` | каскадный fallback | Путь к DuckDB-файлу |
+| `ML_SERVICE_URL` | `http://localhost:5001` | URL ML-сервиса |
+| `ML_DEFAULT_MODEL` | `best_model` | Модель по умолчанию для MCP |
+| `TRAINING_DATA_DIR` | каскадный fallback | База для training-pipeline артефактов |
+| `MLFLOW_TRACKING_URI` | `http://localhost:5000` | MLflow tracking |
 | `MAX_RESULTS` | `1000` | Кол-во статей при ETL из Docker |
-| `QUERY` | *(cybersecurity default)* | arXiv-запрос при ETL из Docker |
-| `CYBERARXIV_COLLECTORS_DIR` | — | Доп. директория для YAML-коллекторов |
+| `QUERY` | *(default cybersecurity)* | arXiv-запрос при ETL из Docker |
+| `CORE_API_KEY` | — | Ключ [CORE API](https://core.ac.uk/services/api) |
+| `LLM_PROVIDER` / `LLM_API_KEY` / `LLM_MODEL` / `LLM_BASE_URL` | — | Override LLM-настроек UI (см. setup_local.md) |
+| `MCP_TRANSPORT` / `MCP_HOST` / `MCP_PORT` | `stdio` / `127.0.0.1` / `8000` | Транспорт MCP-сервера (в Docker — `streamable-http` / `0.0.0.0` / `5002`) |
 
-### TRAINING_DATA_DIR — каскадный fallback
+Каскадный fallback для путей: `env var` → R-option / Python-env → системный путь пакета → `./<name>/` относительно CWD.
 
-Если `TRAINING_DATA_DIR` не задана, `paths.py` пробует кандидатов по очереди и выбирает первый, в который удалось писать:
+---
 
-1. `$TRAINING_DATA_DIR` (если задана)
-2. `/srv/cyberarxiv-ml/training_data` — дефолт в Docker
-3. `./training_data` — относительно CWD (при локальном запуске)
-4. `~/.cyberarxiv/training_data` — последняя соломинка
+## 📚 Документация
 
-Выбранный путь логируется один раз при старте сервиса. Это видно в `GET /training/health` в поле `training_data_dir`.
-
-Путь к БД также можно задать через R-опцию:
-
-```r
-options(cyberarxiv.db_path = "/path/to/cyberarxiv.duckdb")
-```
-
+| Тема | Где |
+|---|---|
+| Подключение MCP, список инструментов | [mcp_server/README.md](mcp_server/README.md) |
+| YAML-коллекторы, env-секреты, troubleshooting | [inst/collectors/README.md](inst/collectors/README.md) |
+| Схема DuckDB, upsert-логика, миграции | [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) |
+| Локальная установка без Docker | [setup_local.md](setup_local.md) |
+| API-функции R-пакета | `?function_name` в R или каталог [man/](man/) |
+| Training pipeline (Python) | [ml_service/training_pipeline/](ml_service/training_pipeline/) |
 ---
 
 ## Troubleshooting
