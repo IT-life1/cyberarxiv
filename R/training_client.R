@@ -74,6 +74,7 @@ training_get_config <- function(ml_service_url = NULL) {
 
 
 #' Like training_get_config but returns the full call result (ok/data/error).
+#' @param ml_service_url Service URL. Defaults to env var `ML_SERVICE_URL`.
 #' @export
 training_get_config_safe <- function(ml_service_url = NULL) {
   url <- .training_url(ml_service_url)
@@ -90,6 +91,14 @@ training_get_config_safe <- function(ml_service_url = NULL) {
 #' success, or a list with $error on failure (call \code{training_set_config_safe}
 #' for the structured result).
 #'
+#' @param classes List of class definitions for the LLM labeler, e.g.
+#'   \code{list(list(name="Malware", description="..."), ...)}. \code{NULL} keeps the current value.
+#' @param system_prompt String. System prompt for the LLM labeler. \code{NULL} keeps the current value.
+#' @param user_prompt_template String. User-message template (uses \code{\{title\}}/\code{\{abstract\}}
+#'   placeholders). \code{NULL} keeps the current value.
+#' @param llm Named list with LLM credentials/config (provider, model, api_key, base_url, ...).
+#'   \code{NULL} keeps the current value.
+#' @param ml_service_url Service URL. Defaults to env var `ML_SERVICE_URL`.
 #' @export
 training_set_config <- function(classes = NULL, system_prompt = NULL,
                                 user_prompt_template = NULL, llm = NULL,
@@ -109,6 +118,7 @@ training_set_config <- function(classes = NULL, system_prompt = NULL,
 
 #' Like training_set_config but returns the full call result (ok/data/error).
 #' Pass empty payload (everything NULL) and you'll get back the current config.
+#' @inheritParams training_set_config
 #' @export
 training_set_config_safe <- function(classes = NULL, system_prompt = NULL,
                                      user_prompt_template = NULL, llm = NULL,
@@ -144,6 +154,8 @@ training_set_config_safe <- function(classes = NULL, system_prompt = NULL,
 #'
 #' @param target Approximate target row count (e.g. 10000).
 #' @param query Optional arXiv search_query override.
+#' @param page_size Integer. Records per arXiv API request. Defaults to 200.
+#' @param ml_service_url Service URL. Defaults to env var `ML_SERVICE_URL`.
 #' @export
 training_start_collect <- function(target, query = NULL, page_size = 200,
                                    ml_service_url = NULL) {
@@ -162,6 +174,10 @@ training_start_collect <- function(target, query = NULL, page_size = 200,
 
 
 #' Start LLM-label job
+#' @param raw_path Path (inside the ML container) to the parquet produced by
+#'   \code{training_start_collect}.
+#' @param max_rows Integer. Cap the number of rows to label; 0 means no cap.
+#' @param ml_service_url Service URL. Defaults to env var `ML_SERVICE_URL`.
 #' @export
 training_start_label <- function(raw_path, max_rows = 0L,
                                  ml_service_url = NULL) {
@@ -178,6 +194,9 @@ training_start_label <- function(raw_path, max_rows = 0L,
 
 
 #' Start export-to-Excel job
+#' @param labeled_path Path to the parquet produced by \code{training_start_label}.
+#' @param max_rows Integer. Cap rows to export; 0 means no cap.
+#' @param ml_service_url Service URL. Defaults to env var `ML_SERVICE_URL`.
 #' @export
 training_start_export_excel <- function(labeled_path, max_rows = 0L,
                                         ml_service_url = NULL) {
@@ -194,6 +213,18 @@ training_start_export_excel <- function(labeled_path, max_rows = 0L,
 
 
 #' Start training job
+#' @param excel_path Path to the .xlsx produced by \code{training_start_export_excel}
+#'   (or hand-edited by the user).
+#' @param model_name_out String. Name to save the trained model under in the ML service.
+#' @param base_model String. Hugging Face model id used as the encoder backbone.
+#' @param epochs Integer. Number of training epochs.
+#' @param batch_size Integer. Mini-batch size.
+#' @param lr Numeric. Initial learning rate.
+#' @param max_length Integer. Max tokenised sequence length.
+#' @param test_size Numeric (0–1). Fraction of data held out as the test split.
+#' @param val_size Numeric (0–1). Fraction of remaining data used as the validation split.
+#' @param mlflow_tracking_uri Optional MLflow URI override; defaults to the service's env.
+#' @param ml_service_url Service URL. Defaults to env var `ML_SERVICE_URL`.
 #' @export
 training_start_train <- function(excel_path,
                                   model_name_out = "custom_model",
@@ -231,6 +262,8 @@ training_start_train <- function(excel_path,
 
 
 #' Poll job state
+#' @param job_id Job identifier returned by one of the \code{training_start_*} calls.
+#' @param ml_service_url Service URL. Defaults to env var `ML_SERVICE_URL`.
 #' @export
 training_get_job <- function(job_id, ml_service_url = NULL) {
   url <- .training_url(ml_service_url)
@@ -248,6 +281,10 @@ training_get_job <- function(job_id, ml_service_url = NULL) {
 
 
 #' List recent jobs
+#' @param type Optional filter by job type (e.g. `"collect"`, `"label"`, `"train"`).
+#'   `NULL` returns jobs of every type.
+#' @param limit Integer. Maximum number of jobs to return (most recent first).
+#' @param ml_service_url Service URL. Defaults to env var `ML_SERVICE_URL`.
 #' @export
 training_list_jobs <- function(type = NULL, limit = 50L, ml_service_url = NULL) {
   url <- .training_url(ml_service_url)
@@ -263,6 +300,8 @@ training_list_jobs <- function(type = NULL, limit = 50L, ml_service_url = NULL) 
 
 
 #' Cancel a job
+#' @param job_id Job identifier returned by one of the \code{training_start_*} calls.
+#' @param ml_service_url Service URL. Defaults to env var `ML_SERVICE_URL`.
 #' @export
 training_cancel_job <- function(job_id, ml_service_url = NULL) {
   url <- .training_url(ml_service_url)
@@ -276,6 +315,8 @@ training_cancel_job <- function(job_id, ml_service_url = NULL) {
 
 
 #' List artifacts in a category (raw / labeled / excel)
+#' @param category One of `"raw"`, `"labeled"`, `"excel"` — which artifact directory to list.
+#' @param ml_service_url Service URL. Defaults to env var `ML_SERVICE_URL`.
 #' @export
 training_list_files <- function(category = c("raw", "labeled", "excel"),
                                 ml_service_url = NULL) {
@@ -290,6 +331,10 @@ training_list_files <- function(category = c("raw", "labeled", "excel"),
 
 
 #' Download an artifact file
+#' @param category One of `"raw"`, `"labeled"`, `"excel"`.
+#' @param filename Name of the file to download (as returned by \code{training_list_files}).
+#' @param dest_path Local path where the downloaded bytes are written.
+#' @param ml_service_url Service URL. Defaults to env var `ML_SERVICE_URL`.
 #' @export
 training_download_file <- function(category, filename, dest_path,
                                    ml_service_url = NULL) {
@@ -305,6 +350,7 @@ training_download_file <- function(category, filename, dest_path,
 
 
 #' Reload all .pt models in the inference service.
+#' @param ml_service_url Service URL. Defaults to env var `ML_SERVICE_URL`.
 #' @export
 training_reload_models <- function(ml_service_url = NULL) {
   url <- .training_url(ml_service_url)

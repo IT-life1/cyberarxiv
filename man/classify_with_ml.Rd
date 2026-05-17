@@ -4,10 +4,13 @@
 \alias{classify_with_ml}
 \title{Classify papers using the ML service}
 \usage{
-classify_with_ml(data, ml_service_url = NULL, batch_size = 50)
+classify_with_ml(data, model = NULL, ml_service_url = NULL, batch_size = 50)
 }
 \arguments{
 \item{data}{data.frame with columns \code{id} and \code{abstract}}
+
+\item{model}{Optional model name (e.g. \code{"general"}, \code{"malware"}).
+If NULL, the service picks the default model.}
 
 \item{ml_service_url}{URL of the ML classification service (default: http://localhost:5001)}
 
@@ -22,7 +25,8 @@ predicted tags with confidence scores.
 }
 \examples{
 \dontrun{
-papers <- load_raw_data()
+papers <- load_publications()
 ml_results <- classify_with_ml(papers)
+ml_results <- classify_with_ml(papers, model = "malware")
 }
 }

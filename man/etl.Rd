@@ -4,11 +4,42 @@
 \alias{etl}
 \title{ETL}
 \usage{
-etl(cmax_results)
+etl(
+  max_results = 100,
+  only_new = FALSE,
+  db_path = NULL,
+  sources = NULL,
+  collectors_dir = NULL,
+  param_overrides = list(),
+  keywords_file = NULL
+)
 }
 \arguments{
-\item{cmax_results}{How many papers to load (integer).}
+\item{max_results}{How many papers to fetch per source (integer). When \code{only_new = TRUE},
+this is the number of \emph{new} (not-yet-stored) papers to collect.}
+
+\item{only_new}{Logical. If TRUE, skips papers already present in the database
+and stops once \code{max_results} genuinely new papers have been saved.
+Defaults to FALSE (standard behaviour: fetch \code{max_results} and upsert all).}
+
+\item{db_path}{Path to DuckDB file. If NULL, uses the package default.}
+
+\item{sources}{Character vector of collector names to run. NULL (default) runs all
+enabled collectors. See \code{\link{list_collectors}}.}
+
+\item{collectors_dir}{Additional directory to scan for collector YAML files.}
+
+\item{param_overrides}{Named list of per-collector parameter overrides passed to
+\code{collect_all()}. E.g. \code{list(arxiv = list(params = list(search_query = "...")))}}
+
+\item{keywords_file}{Optional path to a YAML/JSON keyword config file passed to
+\code{classify_data()}. NULL uses the built-in dictionary.}
 }
 \description{
-Pipeline that fetches papers from arXiv API (Atom) converts it by classifing and updates database.
+Pipeline that fetches papers from configured collectors, classifies them,
+and updates the database.
+}
+\details{
+Follows the pattern: fetch -> DB (raw) -> classify -> update tags in DB.
+Papers are persisted before classification, so a classifier failure never causes data loss.
 }

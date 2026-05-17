@@ -2,18 +2,18 @@
 % Please edit documentation in R/text_utils.R
 \name{get_top_words_by_tag}
 \alias{get_top_words_by_tag}
-\title{Получить топ-N слов по каждой теме}
+\title{Get top-N words per topic}
 \usage{
 get_top_words_by_tag(data, n = 5)
 }
 \arguments{
-\item{data}{data.frame с колонками \code{abstract} и \code{tag}}
+\item{data}{data.frame with columns \code{abstract} and \code{tag}}
 
-\item{n}{integer, сколько слов на тему}
+\item{n}{integer, number of words per topic}
 }
 \value{
-tibble с колонками \code{tag}, \code{word}, \code{n}
+tibble with columns \code{tag}, \code{word}, \code{n}
 }
 \description{
-Получить топ-N слов по каждой теме
+Get top-N words per topic
 }

@@ -2,19 +2,19 @@
 % Please edit documentation in R/text_utils.R
 \name{get_top_words}
 \alias{get_top_words}
-\title{Извлечь топ-N слов из аннотаций}
+\title{Extract top-N words from abstracts}
 \usage{
 get_top_words(data, n = 30)
 }
 \arguments{
-\item{data}{data.frame с колонкой \code{abstract}}
+\item{data}{data.frame with column \code{abstract}}
 
-\item{n}{integer, сколько топ-слов вернуть (по умолчанию 30)}
+\item{n}{integer, how many top words to return (default 30)}
 }
 \value{
-tibble с колонками \code{word}, \code{n}
+tibble with columns \code{word}, \code{n}
 }
 \description{
-Обрабатывает аннотации: очистка, токенизация, фильтрация стоп-слов,
-и возвращает топ слов.
+Processes abstracts: cleaning, tokenization, stop-word filtering,
+and returns top words.
 }
