@@ -561,6 +561,7 @@ etl <- function(max_results = 100, only_new = FALSE, db_path = NULL,
   )
   if (is.null(con)) return(character(0))
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+  .cyberarxiv_ensure_duckdb_extensions(con)
 
   if (!("papers" %in% DBI::dbListTables(con))) return(character(0))
 

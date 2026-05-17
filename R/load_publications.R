@@ -35,6 +35,7 @@ load_publications <- function(db_path = NULL,
 
   con <- DBI::dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = TRUE)
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+  .cyberarxiv_ensure_duckdb_extensions(con)
 
   if (!("papers" %in% DBI::dbListTables(con))) {
     return(.empty_papers_df())

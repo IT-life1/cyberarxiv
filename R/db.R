@@ -28,8 +28,28 @@
   dir.create(dirname(db_path), recursive = TRUE, showWarnings = FALSE)
 
   con <- DBI::dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = FALSE)
+  .cyberarxiv_ensure_duckdb_extensions(con)
   .cyberarxiv_init_schema(con)
   con
+}
+
+#' Install + load DuckDB extensions required by the package
+#'
+#' The `json` extension powers `json_merge_patch` / `json_keys` /
+#' `json_extract_string` used in mlflow_client.R, get_ml_task_ids(), and the
+#' Python MCP layer. Autoload occasionally fails inside containers without
+#' outbound network, so we install + load explicitly on every connection.
+#' INSTALL is a no-op once the extension is cached on disk.
+#'
+#' @noRd
+.cyberarxiv_ensure_duckdb_extensions <- function(con) {
+  tryCatch(DBI::dbExecute(con, "INSTALL json;"), error = function(e) NULL)
+  tryCatch(DBI::dbExecute(con, "LOAD json;"), error = function(e) {
+    warning("Failed to load duckdb 'json' extension: ", conditionMessage(e),
+            ". ML-related queries (json_merge_patch / json_keys) may fail.",
+            call. = FALSE)
+  })
+  invisible(NULL)
 }
 
 #' Initialize database schema (idempotent)
@@ -103,6 +123,7 @@ get_ml_task_ids <- function(db_path = NULL) {
 
   con <- DBI::dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = TRUE)
   on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+  .cyberarxiv_ensure_duckdb_extensions(con)
 
   if (!("papers" %in% DBI::dbListTables(con))) return(character(0))
 
