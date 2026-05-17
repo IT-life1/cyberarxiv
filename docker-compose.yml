@@ -3,6 +3,7 @@ services:
   # R Package + Dashboard Service
   # ============================================================
   cyberarxiv:
+    image: ghcr.io/it-life1/cyberarxiv:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -26,16 +27,6 @@ services:
       - ./raw-data:/srv/cyberarxiv/raw-data
       - ./site:/var/www/html
       - ./training_data:/srv/cyberarxiv/training_data
-    # Hotfix without rebuild: preload DuckDB `json` extension into the
-    # container's extension cache so update_ml_tags() / get_ml_task_ids()
-    # can use json_merge_patch / json_keys without autoload failing.
-    entrypoint:
-      - bash
-      - -c
-      - |
-        R -e 'con <- DBI::dbConnect(duckdb::duckdb(), ":memory:"); DBI::dbExecute(con, "INSTALL json;"); DBI::dbExecute(con, "LOAD json;"); cat("duckdb json extension ready\n")' \
-          || echo "WARN: duckdb json install failed, continuing"
-        exec /srv/cyberarxiv/docker/start.sh
     depends_on:
       cyberarxiv-ml:
         condition: service_healthy
@@ -50,6 +41,7 @@ services:
   # ML Classification Service (PyTorch + MLflow)
   # ============================================================
   cyberarxiv-ml:
+    image: ghcr.io/it-life1/cyberarxiv-ml:latest
     build:
       context: .
       dockerfile: Dockerfile.ml
@@ -107,6 +99,7 @@ services:
   # MCP Server (AI assistant interface)
   # ============================================================
   cyberarxiv-mcp:
+    image: ghcr.io/it-life1/cyberarxiv-mcp:latest
     build:
       context: .
       dockerfile: mcp_server/Dockerfile
@@ -120,18 +113,13 @@ services:
       - MCP_TRANSPORT=streamable-http
       - MCP_HOST=0.0.0.0
       - MCP_PORT=5002
+      # Optional: enables the fetch_core MCP tool. Get a free key at
+      # https://core.ac.uk/services/api. Leave empty to disable.
+      - CORE_API_KEY=${CORE_API_KEY:-}
     ports:
       - "5002:5002"
     volumes:
       - ./data:/data
-    # Same hotfix for the Python duckdb client used by the MCP server.
-    entrypoint:
-      - bash
-      - -c
-      - |
-        python -c "import duckdb; c=duckdb.connect(); c.execute('INSTALL json'); c.execute('LOAD json'); print('duckdb json extension ready')" \
-          || echo "WARN: duckdb json install failed, continuing"
-        exec python server.py
     depends_on:
       cyberarxiv-ml:
         condition: service_healthy
