@@ -4,14 +4,18 @@
 \alias{classify_data}
 \title{Classify data}
 \usage{
-classify_data(data)
+classify_data(data, keywords_file = NULL)
 }
 \arguments{
 \item{data}{dataframe from load_raw_data()}
+
+\item{keywords_file}{Optional path to a YAML or JSON keyword config file.
+If NULL, uses the built-in keyword dictionary. Use \code{load_keyword_config()}
+to inspect or modify the format. Template: \code{system.file("keywords.yml", package = "cyberarxiv")}.}
 }
 \value{
-list with statistics
+data.frame with additional 'tag' column containing topic assignments
 }
 \description{
-Classify data
+Classifies publications by cybersecurity topics using keyword matching.
 }

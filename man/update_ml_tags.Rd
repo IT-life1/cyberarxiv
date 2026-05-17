@@ -4,11 +4,14 @@
 \alias{update_ml_tags}
 \title{Update ML tags in the database}
 \usage{
-update_ml_tags(ml_results, db_path = NULL)
+update_ml_tags(ml_results, task_id = "default", db_path = NULL)
 }
 \arguments{
 \item{ml_results}{data.frame with columns \code{id}, \code{ml_tag}, \code{ml_confidence}
 as returned by \code{classify_with_ml()}}
+
+\item{task_id}{Task identifier matching a key in \code{inst/ml_tasks.yml}
+(default: \code{"default"}).}
 
 \item{db_path}{optional path to duckdb file}
 }
@@ -16,13 +19,14 @@ as returned by \code{classify_with_ml()}}
 invisible list with update count
 }
 \description{
-Takes ML classification results and updates the ml_tag and ml_confidence
-columns in the DuckDB database.
+Takes ML classification results and merges them into the \code{ml_results}
+JSON column under the key given by \code{task_id}. Results from different
+tasks never overwrite each other.
 }
 \examples{
 \dontrun{
-papers <- load_raw_data()
 ml_results <- classify_with_ml(papers)
-update_ml_tags(ml_results)
+update_ml_tags(ml_results, task_id = "default")
+update_ml_tags(ml_results, task_id = "malware")
 }
 }
