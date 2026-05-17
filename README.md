@@ -4,7 +4,8 @@ R-пакет для автоматического сбора, классифи�
 
 Пакет реализует полный ETL-пайплайн: загрузка статей через arXiv API → хранение в DuckDB → keyword-классификация → ML-классификация (DistilBERT) → интерактивный дашборд или Shiny GUI.
 
-(запуск стенда через QUICK_START_QUIDE.md без git clone и setup_local.md через git clone)
+См. [Быстрый старт (Docker)](#быстрый-старт-docker) для запуска через `git clone && docker compose up` или [Локальная установка](#локальная-установка) для разработки.
+
 ---
 
 ## Содержание
@@ -163,52 +164,78 @@ cyberarxiv/
 
 ## Быстрый старт (Docker)
 
+Готовые образы публикуются в [GitHub Container Registry](https://github.com/IT-life1/cyberarxiv/pkgs/container/cyberarxiv) по каждому push в `main` (см. `.github/workflows/docker-build.yml`). Локальной сборки не требуется.
+
 ### Требования
 
-- Docker ≥ 24.0
-- Docker Compose ≥ 2.20
-- Обученная модель `model.pt` (см. раздел [Обучение модели](#обучение-модели))
+- Docker ≥ 24.0 и Docker Compose ≥ 2.20
+- ~15 ГБ свободного места под образ `cyberarxiv-ml` (PyTorch)
 
 ### Запуск
 
 ```bash
-# Клонировать репозиторий
-git clone <repo-url>
+git clone https://github.com/IT-life1/cyberarxiv.git
 cd cyberarxiv
-
-# Создать директории для данных
-mkdir -p data raw-data models mlflow
-
-# Положить обученную модель
-cp /path/to/model.pt models/model.pt
-
-# Поднять всё одной командой
-docker-compose up --build
+docker compose up -d
 ```
+
+`docker compose` автоматически подтянет три образа из `ghcr.io/it-life1/*:latest` — они прописаны в `docker-compose.yml`. Первый старт `cyberarxiv` может занять до 5 минут, пока R-пакет прогревает кэш и проходят healthcheck'и.
 
 После старта доступны:
 
 | Сервис | URL | Описание |
 |---|---|---|
+| Shiny GUI | http://localhost:3838 | Интерактивный дашборд (7 вкладок) |
 | Quarto дашборд | http://localhost:8000/dashboard.html | Статические графики |
-| Shiny GUI | http://localhost:3838 | Интерактивный GUI |
 | ML API | http://localhost:5001 | REST API классификатора |
 | MLflow UI | http://localhost:5000 | Трекинг экспериментов |
+| MCP-сервер | http://localhost:5002/mcp | Для Claude.ai / Cursor (streamable-http) |
 
-### Выбор UI
+Данные сохраняются в bind-mount директории: `./data`, `./raw-data`, `./training_data`, `./models`, `./mlflow`. Все они создаются автоматически при первом запуске.
 
-По умолчанию запускается Quarto дашборд. Для Shiny GUI:
+### Опциональные секреты
 
 ```bash
-UI_MODE=shiny docker-compose up
+# Ключ для коллектора CORE (https://core.ac.uk/services/api)
+export CORE_API_KEY=...
+
+# Если хотите задать LLM-провайдер из env, а не из UI (training_data/config.json)
+export LLM_PROVIDER=openai LLM_API_KEY=sk-...
+
+docker compose up -d
 ```
 
-### Параметры ETL через окружение
+### ML-модели
+
+Чтобы `cyberarxiv-ml` мог классифицировать статьи, в `./models/` должны лежать `.pt`-файлы. Можно либо обучить их через UI (вкладка Training), либо скачать готовые из релизов репозитория и положить в `./models/` до `docker compose up`.
+
+### Обновление до свежей версии
+
+```bash
+git pull
+docker compose pull
+docker compose up -d
+```
+
+### Параметры ETL и UI
 
 ```bash
 # Скачать 500 статей с кастомным запросом
-MAX_RESULTS=500 QUERY="cat:cs.CR AND all:ransomware" docker-compose up
+MAX_RESULTS=500 QUERY="cat:cs.CR AND all:ransomware" docker compose up
+
+# По умолчанию запускается Quarto дашборд; для Shiny:
+UI_MODE=shiny docker compose up
 ```
+
+### Локальная сборка (для разработки)
+
+Если правите Dockerfile или хотите запустить изменения до их публикации в GHCR:
+
+```bash
+docker compose up --build
+```
+
+В `docker-compose.yml` рядом с `image:` сохранены `build:` блоки именно для этого сценария.
 
 ---
 
