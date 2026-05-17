@@ -18,8 +18,8 @@ pagination:
   size_param: max_results
   page_size: 100
 
-rate_limit_secs: 0.3
-retry: 3
+rate_limit_secs: 3.0  # arXiv TOS asks for ≥3 sec between requests; 429 below this
+retry: 5
 
 namespace: "http://www.w3.org/2005/Atom"
 item_xpath: ".//atom:entry"

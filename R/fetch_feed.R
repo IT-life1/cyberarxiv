@@ -581,20 +581,39 @@
 
 #' @noRd
 .http_fetch_xml <- function(url, params, retry_n = 3L) {
+  # Treat 429 (rate limit) and 5xx as transient. Backoff: 5s, 10s, 20s, 40s, 60s.
+  # arXiv asks for ≥3s between requests; if our IP got rate-limited the lockout
+  # typically clears within a minute or two, so a few exponential retries
+  # usually recover without operator intervention.
+  is_transient <- function(resp) {
+    s <- httr2::resp_status(resp)
+    s == 429 || (s >= 500 && s < 600)
+  }
+  backoff <- function(i) min(60, 5 * 2 ^ (i - 1))
+
   req <- httr2::request(url) |>
     httr2::req_user_agent("cyberarxiv/0.1.0") |>
-    httr2::req_retry(max_tries = retry_n, max_seconds = 30) |>
+    httr2::req_retry(max_tries = retry_n,
+                     max_seconds = 180,
+                     is_transient = is_transient,
+                     backoff = backoff) |>
     httr2::req_timeout(seconds = 60)
 
   if (length(params) > 0L)
     req <- do.call(httr2::req_url_query, c(list(req), params))
 
   resp <- httr2::req_perform(req)
+  status <- httr2::resp_status(resp)
+  if (status == 200L) return(xml2::read_xml(httr2::resp_body_raw(resp)))
 
-  if (httr2::resp_status(resp) != 200L)
-    stop("HTTP ", httr2::resp_status(resp), " from ", url)
-
-  xml2::read_xml(httr2::resp_body_raw(resp))
+  # Surface 429 explicitly — operators need to know they hit a rate limit, not
+  # just "0 records fetched". Other non-2xx codes get a generic message.
+  if (status == 429L) {
+    stop("HTTP 429 Too Many Requests from ", url,
+         ". Source rate-limited us. Wait a few minutes and retry, ",
+         "or raise `rate_limit_secs` in the collector YAML.")
+  }
+  stop("HTTP ", status, " from ", url)
 }
 
 #' @noRd
