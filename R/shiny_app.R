@@ -213,6 +213,7 @@ launch_app <- function(host = "0.0.0.0",
                 shiny::selectInput("ml_task_batch", "Task:",
                                    choices = ml_task_choices, selected = names(ml_task_choices)[1]),
                 shiny::uiOutput("ml_task_col_info"),
+                shiny::uiOutput("ml_missing_models_banner"),
                 shiny::helpText(
                   "New only: papers without results for the selected task. ",
                   "All (overwrite): re-classify everything."
@@ -856,15 +857,21 @@ launch_app <- function(host = "0.0.0.0",
                 names(list_ml_models(ml_service_url)$models),
                 error = function(e) character(0)
               )
-              ml_res <- tryCatch(
+              cls <- tryCatch(
                 .classify_by_language(raw, language_models, available, ml_service_url),
                 error = function(e) { append_log(paste("ML ERROR:", conditionMessage(e))); NULL }
               )
+              ml_res <- if (is.null(cls)) NULL else cls$results
               if (!is.null(ml_res) && nrow(ml_res) > 0) {
                 upd <- update_ml_tags(ml_res, task_id = task_id)
                 append_log(paste0("ML [", task_id, "]: обновлено ", upd$updated, " записей"))
               } else {
                 append_log("ML: нет результатов (модели не загружены или пропущены).")
+              }
+              if (!is.null(cls) && length(cls$skipped_by_language) > 0) {
+                summary <- paste0(names(cls$skipped_by_language), "=",
+                                  unlist(cls$skipped_by_language), collapse = ", ")
+                append_log(paste0("ML [", task_id, "] skipped (no model for language): ", summary))
               }
             }
           } else {
@@ -1058,6 +1065,63 @@ launch_app <- function(host = "0.0.0.0",
         shiny::strong("Результат запишется в:"),
         shiny::br(),
         shiny::code(paste0("ml_results.", task_id))
+      )
+    })
+
+    # Warn the user when the current ML task has no model for a language
+    # that's present in the database — those papers will be silently
+    # skipped at classification time, and "(no ML data)" in the analytics
+    # view would otherwise be unexplained.
+    output$ml_missing_models_banner <- shiny::renderUI({
+      task_id <- trimws(input$ml_task_batch %||% names(ml_task_choices)[1])
+      if (!nzchar(task_id)) return(NULL)
+      task_def <- ml_tasks_info[[task_id]]
+      if (is.null(task_def)) return(NULL)
+      lang_mdls <- task_def$models %||% list()
+
+      pubs <- publications()
+      if (is.null(pubs) || nrow(pubs) == 0L) return(NULL)
+      lang_col <- if ("language" %in% names(pubs)) pubs$language else character(0)
+      lang_col <- lang_col[!is.na(lang_col) & nzchar(lang_col)]
+      if (!length(lang_col)) return(NULL)
+
+      available <- tryCatch(
+        names(list_ml_models(ml_service_url)$models),
+        error = function(e) character(0)
+      )
+
+      lang_counts <- table(lang_col)
+      missing <- list()
+      for (lang in names(lang_counts)) {
+        model_name <- lang_mdls[[lang]] %||% ""
+        if (!nzchar(model_name)) {
+          missing[[lang]] <- list(count = as.integer(lang_counts[[lang]]),
+                                  reason = "no model registered for this language in the task")
+        } else if (length(available) > 0L && !model_name %in% available) {
+          missing[[lang]] <- list(
+            count = as.integer(lang_counts[[lang]]),
+            reason = paste0("model '", model_name, "' is not loaded in the ML service")
+          )
+        }
+      }
+      if (!length(missing)) return(NULL)
+
+      items <- lapply(names(missing), function(lang) {
+        m <- missing[[lang]]
+        shiny::tags$li(
+          shiny::strong(paste0(lang, ": ")),
+          paste0(m$count, " paper(s) — ", m$reason)
+        )
+      })
+
+      shiny::div(
+        class = "alert alert-warning",
+        role = "alert",
+        style = "padding:10px 14px; margin-bottom:10px; font-size:13px;",
+        shiny::strong("Some papers will be skipped during ML classification."),
+        shiny::tags$ul(style = "margin:6px 0 0 0; padding-left:18px;", items),
+        shiny::tags$small(style = "color:#555;",
+          "Register a model for the missing language in the Training tab or load the expected model into the ML service.")
       )
     })
 
