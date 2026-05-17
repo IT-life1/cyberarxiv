@@ -440,20 +440,50 @@ etl_with_ml <- function(max_results = 100, ml_service_url = NULL,
     error = function(e) character(0)
   )
 
-  ml_results <- .classify_by_language(data, language_models, available, ml_service_url)
+  cls <- .classify_by_language(data, language_models, available, ml_service_url)
+  ml_results <- cls$results
+
+  empty_stats <- list(
+    updated = 0L,
+    classified_by_language = cls$classified_by_language,
+    skipped_by_language = cls$skipped_by_language
+  )
 
   if (is.null(ml_results) || nrow(ml_results) == 0L)
-    return(invisible(list(updated = 0L)))
+    return(invisible(empty_stats))
 
   update_stats <- update_ml_tags(ml_results, task_id = task)
+  update_stats$classified_by_language <- cls$classified_by_language
+  update_stats$skipped_by_language    <- cls$skipped_by_language
+
   message("ML classification complete [task=", task, "]. Updated ",
           update_stats$updated, " records.")
+  if (length(update_stats$skipped_by_language) > 0L) {
+    summary <- paste0(names(update_stats$skipped_by_language), "=",
+                      unlist(update_stats$skipped_by_language), collapse = ", ")
+    message("  Skipped (no model for language): ", summary)
+  }
   invisible(update_stats)
 }
 
 #' @noRd
+#' Classify papers grouped by language.
+#'
+#' Returns a list with three elements:
+#'   results                 — data.frame of classified rows (may be NULL)
+#'   classified_by_language  — named list lang → n classified
+#'   skipped_by_language     — named list lang → n skipped because no model
+#'                             was registered or no model is loaded in the
+#'                             service. Use this to surface "no ru model"
+#'                             warnings in the UI / MCP response.
 .classify_by_language <- function(data, language_models, available_models, ml_service_url) {
-  if (!is.data.frame(data) || nrow(data) == 0L) return(NULL)
+  skipped_by_language    <- list()
+  classified_by_language <- list()
+
+  if (!is.data.frame(data) || nrow(data) == 0L)
+    return(list(results = NULL,
+                classified_by_language = classified_by_language,
+                skipped_by_language    = skipped_by_language))
 
   lang_col <- if ("language" %in% names(data)) data$language else rep("", nrow(data))
   lang_col[is.na(lang_col) | !nzchar(lang_col)] <- "en"
@@ -468,12 +498,14 @@ etl_with_ml <- function(max_results = 100, ml_service_url = NULL,
 
     if (is.null(model_name) || !nzchar(model_name)) {
       message("  Skipping ML for language='", lang, "' (task has no model for this language).")
+      skipped_by_language[[lang]] <- nrow(group)
       next
     }
 
     if (length(available_models) > 0L && !model_name %in% available_models) {
       message("  Skipping ML for language='", lang, "': model '", model_name,
               "' not loaded in service.")
+      skipped_by_language[[lang]] <- nrow(group)
       next
     }
 
@@ -487,9 +519,17 @@ etl_with_ml <- function(max_results = 100, ml_service_url = NULL,
         NULL
       }
     )
-    if (!is.null(res)) results[[lang]] <- res
+    if (!is.null(res)) {
+      results[[lang]] <- res
+      classified_by_language[[lang]] <- nrow(res)
+    } else {
+      skipped_by_language[[lang]] <- nrow(group)
+    }
   }
 
-  if (length(results) == 0L) return(NULL)
-  do.call(rbind, results)
+  list(
+    results = if (length(results)) do.call(rbind, results) else NULL,
+    classified_by_language = classified_by_language,
+    skipped_by_language    = skipped_by_language
+  )
 }

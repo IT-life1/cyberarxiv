@@ -86,14 +86,45 @@ def tool_run_ml_batch(only_new: bool = True, limit: int = 100) -> str:
         papers = db.search_papers(db_path=_db(), limit=limit)
 
     if not papers:
-        return json.dumps({"status": "ok", "message": "Нет статей для классификации", "updated": 0})
+        return json.dumps({
+            "status": "ok",
+            "message": "Нет статей для классификации",
+            "updated": 0,
+            "unclassified_by_language": {},
+        })
 
     results = ml_client.classify_batch(papers)
     if not results:
-        return json.dumps({"status": "error", "message": "ML сервис недоступен или вернул пустой результат", "updated": 0})
+        return json.dumps({
+            "status": "error",
+            "message": "ML сервис недоступен или вернул пустой результат",
+            "updated": 0,
+            "unclassified_by_language": {},
+        })
+
+    # Group papers that did not receive a tag by language. Most often this
+    # means no model is loaded for that language, but it can also be any
+    # classification failure — surface the count so the caller can act.
+    lang_by_id = {p["paper_id"]: (p.get("language") or "unknown") for p in papers}
+    unclassified_by_language: dict[str, int] = {}
+    for r in results:
+        if not r.get("tag"):
+            lang = lang_by_id.get(r.get("paper_id"), "unknown")
+            unclassified_by_language[lang] = unclassified_by_language.get(lang, 0) + 1
 
     updated = db.update_ml_tags(db_path=_db(), results=results)
-    return json.dumps({"status": "ok", "updated": updated, "message": f"Классифицировано {updated} статей"})
+
+    msg = f"Классифицировано {updated} статей"
+    if unclassified_by_language:
+        summary = ", ".join(f"{k}={v}" for k, v in sorted(unclassified_by_language.items()))
+        msg += f"; не классифицировано (нет модели для языка): {summary}"
+
+    return json.dumps({
+        "status": "ok",
+        "updated": updated,
+        "unclassified_by_language": unclassified_by_language,
+        "message": msg,
+    }, ensure_ascii=False)
 
 
 # ─── Регистрация инструментов в MCP ───────────────────────────────────────
