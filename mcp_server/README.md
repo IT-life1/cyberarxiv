@@ -27,9 +27,15 @@ MCP-сервер (Model Context Protocol) для проекта CyberArXiv. По
 | `classify_paper` | ML-классификация текста | `abstract`, `language` |
 | `run_ml_batch` | Пакетная ML-классификация | `only_new`, `limit` |
 | `fetch_arxiv` | Скачать статьи с arXiv в БД | `query`, `max_results` |
-| `fetch_cyberleninka` | Скачать статьи с КиберЛенинки (OAI-PMH) в БД | `set_spec`, `max_results` |
+| `fetch_cyberleninka` | ⚠️ experimental — статьи с КиберЛенинки (OAI-PMH), часто без аннотаций | `set_spec`, `max_results` |
 | `fetch_core` | Скачать статьи с CORE API в БД (нужен `CORE_API_KEY`) | `query`, `max_results` |
 | `fetch_by_url` | Скачать одну статью по URL/DOI в БД | `url` |
+
+> **CyberLeninka — ограничение.** OAI-PMH-фид КиберЛенинки в большинстве записей
+> не отдаёт `dc:description` (аннотацию). Поэтому после `fetch_cyberleninka` в БД
+> попадают преимущественно метаданные без текста, и ML-классификатор по теме на
+> таких записях работает плохо. Инструмент оставлен для случаев, когда нужны
+> ссылки/авторы, а не тематическая классификация.
 
 ## Структура
 
