@@ -77,3 +77,80 @@ test_that("get_ml_task_ids returns character(0) on a fresh empty DB", {
 
   expect_identical(get_ml_task_ids(db_path = db_path), character(0))
 })
+
+test_that("get_ml_task_ids returns task IDs from ml_results JSON", {
+  skip_if_not_installed("DBI")
+  skip_if_not_installed("duckdb")
+
+  init_schema <- getFromNamespace(".cyberarxiv_init_schema", "cyberarxiv")
+  db_path <- tempfile(fileext = ".duckdb")
+  on.exit(unlink(db_path, force = TRUE), add = TRUE)
+
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = FALSE)
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+  init_schema(con)
+
+  DBI::dbExecute(con, "
+    INSERT INTO papers (paper_id, title, abstract, published_date, source, language, ml_results)
+    VALUES
+      ('p1', 'Paper One', 'Abstract one.', NOW(), 'arxiv', 'en',
+       '{\"default\":{\"label\":\"relevant\",\"score\":0.91}}'),
+      ('p2', 'Paper Two', 'Abstract two.', NOW(), 'arxiv', 'en',
+       '{\"malware\":{\"label\":\"relevant\",\"score\":0.78}}'),
+      ('p3', 'Paper Three', 'Abstract three.', NOW(), 'arxiv', 'en', NULL)
+  ")
+
+  ids <- get_ml_task_ids(db_path = db_path)
+  expect_true("default" %in% ids)
+  expect_true("malware" %in% ids)
+  expect_false("nonexistent" %in% ids)
+})
+
+test_that("get_ml_task_ids handles multiple tasks in one record", {
+  skip_if_not_installed("DBI")
+  skip_if_not_installed("duckdb")
+
+  init_schema <- getFromNamespace(".cyberarxiv_init_schema", "cyberarxiv")
+  db_path <- tempfile(fileext = ".duckdb")
+  on.exit(unlink(db_path, force = TRUE), add = TRUE)
+
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = FALSE)
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+  init_schema(con)
+
+  DBI::dbExecute(con, "
+    INSERT INTO papers (paper_id, title, abstract, published_date, source, language, ml_results)
+    VALUES
+      ('p1', 'Multi-task paper', 'Abstract.', NOW(), 'arxiv', 'en',
+       '{\"default\":{\"label\":\"relevant\",\"score\":0.9},\"malware\":{\"label\":\"irrelevant\",\"score\":0.3}}')
+  ")
+
+  ids <- get_ml_task_ids(db_path = db_path)
+  expect_true("default" %in% ids)
+  expect_true("malware" %in% ids)
+  expect_equal(length(ids), 2L)
+})
+
+test_that(".cyberarxiv_init_schema creates all expected indexes", {
+  skip_if_not_installed("DBI")
+  skip_if_not_installed("duckdb")
+
+  init_schema <- getFromNamespace(".cyberarxiv_init_schema", "cyberarxiv")
+  db_path <- tempfile(fileext = ".duckdb")
+  on.exit(unlink(db_path, force = TRUE), add = TRUE)
+
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = db_path, read_only = FALSE)
+  on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+  init_schema(con)
+
+  indexes <- DBI::dbGetQuery(
+    con,
+    "SELECT index_name FROM duckdb_indexes() WHERE table_name = 'papers'"
+  )$index_name
+
+  expect_true("idx_papers_paper_id"   %in% indexes)
+  expect_true("idx_papers_published"  %in% indexes)
+  expect_true("idx_papers_tag"        %in% indexes)
+  expect_true("idx_papers_source"     %in% indexes)
+  expect_true("idx_papers_language"   %in% indexes)
+})
